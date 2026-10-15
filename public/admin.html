@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · OFG Recife</title><link rel="stylesheet" href="/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script></head>
+<body><div class="shell"><div class="topbar"><h1>Admin · OFG Recife</h1></div><main id="m">
+<form id="k" class="card filled"><div class="field"><label>Chave de admin</label><input id="key" type="password" required></div><button class="btn">Entrar</button><div id="kerr" class="err"></div></form>
+</main></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let KEY = sessionStorage.getItem('adm') || '';
+const call = async (p, body) => {
+  const r = await fetch('/api/admin/' + p, { method: body ? 'POST' : 'GET', headers: { 'x-admin-key': KEY, 'Content-Type': 'application/json' }, body: body && JSON.stringify(body) });
+  const j = await r.json(); if (!r.ok) throw new Error(j.error); return j;
+};
+async function load() {
+  const s = await call('stats');
+  const ev = await (await fetch('/api/event')).json();
+  $('#m').innerHTML = `
+  <div class="card row"><div class="grow"><b>${s.users}</b> inscritos · <b>${s.checkedIn}</b> com check-in · <b>${s.connections}</b> conexões · <b>${s.messages}</b> mensagens</div><button class="btn small tonal" onclick="load()">Atualizar</button></div>
+  <h3 class="title-m">QR codes de check-in (imprimir / projetar na receção)</h3>
+  ${s.codes.map((c) => `<div class="card row"><div id="qr-${c.day}"></div><div><b>${esc(c.title)}</b><div class="body-s">${c.date}</div><div class="title-l">${c.code}</div></div></div>`).join('')}
+  <h3 class="title-m">Enviar aviso a todos</h3>
+  <form id="ann" class="card filled"><div class="field"><label>Título</label><input name="title" required maxlength="80"></div><div class="field"><label>Mensagem</label><textarea name="body" maxlength="400"></textarea></div>
+    <label class="row body-s"><input type="checkbox" name="alert"> Marcar como alerta (mudança de sala / atraso)</label><button class="btn">Enviar aviso</button><div id="aok" class="body-s"></div></form>
+  <h3 class="title-m">Nova enquete</h3>
+  <form id="poll" class="card filled"><div class="field"><label>Sessão</label><select name="sessionId" style="height:56px;border-radius:8px;border:1px solid var(--md-outline);background:transparent;padding:0 12px">${ev.sessions.map((x) => `<option value="${x.id}">${esc(x.title.slice(0, 50))}</option>`).join('')}</select></div>
+    <div class="field"><label>Pergunta</label><input name="question" required></div><div class="field"><label>Opções (uma por linha, 2 a 6)</label><textarea name="options" required></textarea></div><button class="btn">Abrir enquete</button></form>
+  ${s.polls.map((p) => `<div class="card row"><div class="grow">${esc(p.question)}<div class="body-s">${p.options.length} opções · ${Object.keys(p.votes).length} votos</div></div>${p.open ? `<button class="btn small tonal" onclick="closePoll('${p.id}')">Fechar</button>` : '<span class="chip static">Fechada</span>'}</div>`).join('')}
+  <h3 class="title-m">Perguntas recebidas</h3>
+  ${s.openQuestions.sort((a, b) => b.upvotes.length - a.upvotes.length).map((q) => `<div class="card"><div>${esc(q.text)}</div><div class="body-s">▲ ${q.upvotes.length} · ${esc(ev.sessions.find((x) => x.id === q.sessionId)?.title || '')}</div></div>`).join('') || '<div class="empty">Nenhuma.</div>'}`;
+  s.codes.forEach((c) => new QRCode($('#qr-' + c.day), { text: `${location.origin}/?checkin=${c.code}`, width: 120, height: 120 }));
+  $('#ann').onsubmit = async (e) => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); await call('announce', { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info' }); e.target.reset(); $('#aok').textContent = 'Enviado ✔'; };
+  $('#poll').onsubmit = async (e) => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); await call('poll', { sessionId: d.sessionId, question: d.question, options: d.options.split('\n') }); load(); };
+}
+async function closePoll(id) { await call('poll/close', { id }); load(); }
+$('#k').onsubmit = async (e) => { e.preventDefault(); KEY = $('#key').value; try { await call('stats'); sessionStorage.setItem('adm', KEY); load(); } catch (er) { $('#kerr').textContent = er.message; } };
+if (KEY) load().catch(() => {});
+</script></body></html>

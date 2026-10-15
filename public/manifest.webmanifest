@@ -1,0 +1,10 @@
+{
+  "name": "OFG Recife 2026",
+  "short_name": "OFG Recife",
+  "description": "Programa, networking e avisos do evento OFG Recife 2026",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#0b3d6e",
+  "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

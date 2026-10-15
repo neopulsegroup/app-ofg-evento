@@ -1,0 +1,5 @@
+# HTTPS automático (Let's Encrypt). Proxy também para WebSocket (/ws).
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:3000
+}
