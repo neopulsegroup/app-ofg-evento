@@ -26,7 +26,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw new Error(j.error || 'Erro');
   return j;
 }
-function logout() { localStorage.removeItem('ofg_token'); S.token = null; S.me = null; ws?.close(); render(); }
+function logout() { localStorage.removeItem('ofg_token'); S.token = null; S.me = null; clearTimeout(syncTimer); lastVer = lastUv = null; render(); }
 
 const fmtDay = (d) => new Date(d + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
 const sessionTs = (s) => { const d = S.ev.event.days.find((x) => x.id === s.day); return new Date(`${d.date}T${s.start}:00-03:00`).getTime(); };
@@ -39,32 +39,40 @@ function toast(title, body) {
   el.className = 'toast'; el.innerHTML = `<b>${esc(title)}</b>${esc(body || '')}`;
   $('#toasts').append(el);
   setTimeout(() => el.remove(), 6000);
-  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification(title, { body, icon: '/icons/icon.svg' });
 }
 
-// ---------- websocket ----------
-let ws, wsRetry = 0;
-function connectWS() {
-  if (!S.token) return;
-  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?token=${S.token}`);
-  ws.onopen = () => (wsRetry = 0);
-  ws.onclose = (e) => { if (S.token && e.code !== 4001) setTimeout(connectWS, Math.min(1000 * 2 ** wsRetry++, 15000)); };
-  ws.onmessage = async (e) => {
-    const m = JSON.parse(e.data);
-    if (m.type === 'notification') { S.notes.unshift(m.item); toast(m.item.title, m.item.body); }
-    if (m.type === 'announcement') { S.ev.announcements.unshift(m.item); }
-    if (m.type === 'message') {
-      const other = m.item.from === S.me.id ? m.item.to : m.item.from;
-      if (S.chatWith === other) { S.chat.push(m.item); }
+// ---------- sincronização (polling leve; a Vercel não suporta websockets) ----------
+let syncTimer, lastVer = null, lastUv = null, seenNotes = new Set(), pollMs = 6000, idleTicks = 0;
+function startSync() {
+  clearTimeout(syncTimer);
+  const tick = async () => {
+    if (!S.token || !S.me) return;
+    if (!document.hidden) {
+      try {
+        const r = await api('/sync');
+        let changed = false;
+        if (lastVer !== null && r.ver !== lastVer) {
+          const ev = await api('/event'); S.ev.announcements = ev.announcements;
+          await Promise.all([loadPolls(), loadQuestions(), S.tab === 'more' ? loadBoard() : null]); changed = true;
+        }
+        if (lastUv !== null && r.uv !== lastUv) {
+          await Promise.all([loadConns(), loadNotes(), loadSugg()]);
+          if (S.chatWith) S.chat = await api('/messages/' + S.chatWith);
+          S.notes.filter((n) => !n.read && !seenNotes.has(n.id)).slice(0, 3).forEach((n) => toast(n.title, n.body));
+          changed = true;
+        }
+        S.notes.forEach((n) => seenNotes.add(n.id));
+        lastVer = r.ver; lastUv = r.uv;
+        idleTicks = changed ? 0 : idleTicks + 1;
+        if (changed && !typing()) { render(); if (S.chatWith) window.scrollTo(0, document.body.scrollHeight); }
+      } catch { /* offline: tenta no próximo ciclo */ }
     }
-    if (m.type === 'connections') await loadConns();
-    if (m.type === 'poll') await loadPolls();
-    if (m.type === 'questions') await loadQuestions();
-    if (m.type === 'leaderboard' && S.tab === 'more') await loadBoard();
-    if (!typing()) render();
-    if (S.chatWith) window.scrollTo(0, document.body.scrollHeight);
+    // abranda quando nada muda (poupa pedidos): 6s -> 15s
+    syncTimer = setTimeout(tick, idleTicks > 10 ? 15000 : pollMs);
   };
+  tick();
 }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.token) { idleTicks = 0; startSync(); } });
 const typing = () => ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
 
 // ---------- Web Push ----------
@@ -74,6 +82,7 @@ async function enablePush() {
   if ((await Notification.requestPermission()) !== 'granted') return;
   const reg = await navigator.serviceWorker.ready;
   const { key } = await api('/push/key');
+  if (!key) return toast('Notificações', 'Push não configurado no servidor.');
   const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) }));
   await api('/push/subscribe', { method: 'POST', body: { subscription: sub.toJSON() } });
   toast('Notificações ativadas', 'Receberá avisos mesmo com a app fechada.');
@@ -96,7 +105,7 @@ async function boot() {
   try { S.ev = await api('/event'); } catch { document.body.innerHTML = '<p style="padding:24px">Sem ligação. Tente novamente.</p>'; return; }
   S.day = S.ev.event.days.find((d) => d.date === new Date().toISOString().slice(0, 10))?.id || S.ev.event.days[0].id;
   if (S.token) {
-    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); connectWS(); syncPush(); } catch { /* logout tratado */ }
+    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); startSync(); syncPush(); } catch { /* logout tratado */ }
     const code = new URLSearchParams(location.search).get('checkin');
     if (code && S.me) { await doCheckin(code); history.replaceState({}, '', '/'); }
   }

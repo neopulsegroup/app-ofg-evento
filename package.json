@@ -5,11 +5,12 @@
   "description": "PWA do evento Oporto Forte Group - Recife 2026",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node dev.js",
+    "dev": "node --watch dev.js",
+    "vapid": "node -e \"console.log(require('web-push').generateVAPIDKeys())\""
   },
   "dependencies": {
-    "web-push": "^3.6.7",
-    "ws": "^8.18.0"
+    "@upstash/redis": "^1.39.0",
+    "web-push": "^3.6.7"
   }
 }
