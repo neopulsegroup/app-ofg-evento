@@ -19,6 +19,7 @@ http.createServer((req, res) => {
     return;
   }
   let file = path.normalize(path.join(PUBLIC, url.pathname === '/' ? 'index.html' : url.pathname));
+  if (!path.extname(file) && fs.existsSync(file + '.html')) file += '.html'; // URLs limpas (/privacidade)
   if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(PUBLIC, 'index.html');
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);

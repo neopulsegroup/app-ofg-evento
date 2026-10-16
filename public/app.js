@@ -209,6 +209,7 @@ const field = (name, label, ph, o = {}) => `<div class="field"><div class="row b
 const authTop = (title) => `<div class="authbar"><button class="tool" data-act="authmode" data-v="welcome" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button><span class="ofgtag">OFG</span><b class="grow clip">${title}</b></div>`;
 const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Boa Viagem Corporate · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
 const googleBlock = (sepAfter) => S.ev.googleClientId ? `<div class="gwrap">${sepAfter ? '<div class="or"><span>ou</span></div>' : ''}<div id="gbtn" class="gbtn" aria-label="Continuar com Google"></div>${sepAfter ? '' : '<div class="or"><span>ou preencha o formulário</span></div>'}</div>` : '';
+const legalLine = () => `<p class="muted" style="text-align:center">Ao continuar, aceita os <a href="/termos" target="_blank" rel="noopener">Termos de Serviço</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>`;
 const supportCard = (txt) => `<div class="card pad-s row" style="gap:12px">${icon('support_agent')}<p class="muted" style="text-align:center;flex:1">${txt}</p></div>`;
 
 let gisReady = null, gisInit = false;
@@ -268,6 +269,7 @@ function authView() {
       <p class="muted">Já está no Boa Viagem Corporate? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
     <button class="btn block" data-act="authmode" data-v="register">${icon('assignment_ind')} Criar meu perfil no evento</button>
     <button class="btn tonal block" data-act="authmode" data-v="login">${icon('login')} Já tenho conta / Entrar</button>
+    ${legalLine()}
     ${venueLine()}
     <p class="muted" style="text-align:center">Precisa de suporte com a sua inscrição? Fale com a organização.</p>
     <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('public', 'i-s')} Porto Digital</b></div>
@@ -289,7 +291,8 @@ function authView() {
       ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
       <button class="btn block">Entrar no evento ${icon('arrow_forward', 'i-s')}</button>
       <button type="button" class="btn text block" data-act="authmode" data-v="login" style="color:var(--text)">Já tenho conta</button></form>
-    <p class="muted row" style="gap:8px">${icon('shield', 'i-s')} Os seus dados ficam visíveis apenas para os outros participantes do evento.</p>`;
+    <p class="muted row" style="gap:8px">${icon('shield', 'i-s')} Os seus dados ficam visíveis apenas para os outros participantes do evento.</p>
+    ${legalLine()}`;
   else if (mode === 'login') inner = `
     <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
       <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Rotas &amp; Oportunidades</span>
@@ -303,6 +306,7 @@ function authView() {
       <button class="btn block">Entrar no App do Evento ${icon('arrow_forward', 'i-s')}</button></form>
     ${googleBlock(true)}
     <p style="text-align:center" class="muted">Ainda não tem cadastro? <button class="btn text small" data-act="authmode" data-v="register" style="padding:0 4px;height:auto">Crie o seu perfil</button></p>
+    ${legalLine()}
     ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (Sala 45).')}`;
   else if (mode === 'recover') inner = `${authTop('Identity Verification')}
     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('lock')}</div>
@@ -479,7 +483,10 @@ function adminDash() {
     <div class="card"><h3 class="h-md">Interesses mais populares</h3>${st.topInterests.map(([k, n]) => hbar(k, n, st.topInterests[0][1])).join('') || '<div class="muted">Sem dados.</div>'}</div>
     <div class="card"><h3 class="h-md">Empresas com mais inscritos</h3>${st.topCompanies.map(([k, n]) => hbar(k, n, st.topCompanies[0][1])).join('') || '<div class="muted">Sem dados.</div>'}</div>
     <div class="sec-title"><h3>QR codes de check-in</h3></div><p class="muted">Projete ou imprima na receção. Cada QR abre a app e faz o check-in do dia.</p>
-    ${st.codes.map((c) => `<div class="card pad-s row top"><div style="background:#fff;padding:8px;border-radius:12px" data-qr="${c.code}"></div><div class="grow"><b>${esc(c.title)}</b><div class="muted">${fmtDay(c.date)}</div><div class="title-l mono" style="letter-spacing:.08em">${c.code}</div><button class="btn small tonal" data-act="copylink" data-v="${c.code}">${icon('content_copy', 'i-s')} Copiar link</button></div></div>`).join('')}`;
+    ${st.codes.map((c) => `<div class="card pad-s row top" style="flex-wrap:wrap"><div style="background:#fff;padding:8px;border-radius:12px" data-qr="${c.code}"></div><div style="flex:1 1 150px;min-width:0"><b>${esc(c.title)}</b><div class="muted">${fmtDay(c.date)}</div><div class="title-l mono" style="letter-spacing:.08em">${c.code}</div><button class="btn small tonal" data-act="copylink" data-v="${c.code}">${icon('content_copy', 'i-s')} Copiar link</button></div></div>`).join('')}
+    <div class="sec-title"><h3>Documentos legais</h3></div><p class="muted">Páginas públicas do aplicativo. Use estes links na tela de consentimento do Google e onde for exigido.</p>
+    ${[['Política de Privacidade', '/privacidade'], ['Termos de Serviço', '/termos']].map(([t, u]) => `<div class="card pad-s"><b>${t}</b><div class="muted clip">${esc(location.origin + u)}</div>
+      <div class="row"><a class="btn small tonal grow" href="${u}" target="_blank" rel="noopener">${icon('open_in_new', 'i-s')} Abrir</a><button class="btn small grow" data-act="copyurl" data-v="${u}">${icon('content_copy', 'i-s')} Copiar link</button></div></div>`).join('')}`;
 }
 
 function adminUsers() {
@@ -673,7 +680,8 @@ function profileView() {
       <div class="label">Interesses</div><div class="chips">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.me.interests.includes(i) ? 'on' : ''}" data-act="myint" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div>
       <button class="btn">Guardar</button>
       ${'Notification' in window && Notification.permission !== 'granted' ? '<button type="button" class="btn tonal" data-act="notif">Ativar notificações</button>' : ''}
-      <button type="button" class="btn text" data-act="logout">Sair</button></form>`;
+      <button type="button" class="btn text" data-act="logout">Sair</button></form>
+    <p class="muted" style="text-align:center"><a href="/termos" target="_blank" rel="noopener">Termos de Serviço</a> · <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a></p>`;
 }
 
 async function startSession(token, remember) {
@@ -713,6 +721,7 @@ document.addEventListener('click', async (e) => {
       await api('/admin/users/role', { method: 'POST', body: { id, admin: v === '1' } }); await loadAdmin(); toast('Permissões atualizadas', u.name);
     }
     else if (act === 'exportcsv') { exportCSV(); return; }
+    else if (act === 'copyurl') { await navigator.clipboard?.writeText(location.origin + v); toast('Link copiado', location.origin + v); return; }
     else if (act === 'copylink') { await navigator.clipboard?.writeText(`${location.origin}/?checkin=${v}`); toast('Link copiado'); return; }
     else if (act === 'closepoll') { await api('/admin/poll/close', { method: 'POST', body: { id } }); await loadAdmin(); }
     else if (act === 'delpoll') { if (!confirm('Apagar esta enquete e os seus votos?')) return; await api('/admin/poll/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
