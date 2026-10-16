@@ -3,6 +3,14 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const icon = (n, cls = '') => `<span class="material-symbols-outlined ${cls}">${n}</span>`;
 
+// ---------- tema (escuro/claro) ----------
+const getTheme = () => { try { return localStorage.getItem('ofg_theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
+function applyTheme(t) {
+  if (t === 'light') document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('ofg_theme', t); } catch { /* sem armazenamento: vale só nesta sessão */ }
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = t === 'light' ? '#F3F6FB' : '#111418';
+}
+
 // ---------- estado ----------
 const S = { token: localStorage.getItem('ofg_token') || sessionStorage.getItem('ofg_token'), me: null, ev: null, tab: 'agenda', day: null, view: null, people: [], q: '', conns: [], sugg: [], polls: [], questions: [], notes: [], board: null, chat: [], chatWith: null, qSession: null, err: '', authMode: 'welcome', draft: {}, recoverSent: false, recoverEmail: '', pickInterests: [] };
 
@@ -177,7 +185,7 @@ function authView() {
   let inner;
   if (mode === 'welcome') inner = `
     <div class="card" style="padding:16px">
-      <div class="hero-img"><video src="/media/intro.mp4" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video><img class="hero-logo" src="/media/logo-ofg.png" alt="Oporto Forte Group"><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:var(--text)"><span class="d" style="background:var(--live)"></span>Edição especial</span>
+      <div class="hero-img"><video src="/media/intro.mp4" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video><img class="hero-logo" src="/media/logo-ofg.png" alt="Oporto Forte Group"><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:#F1F5F9"><span class="d" style="background:var(--live)"></span>Edição especial</span>
         <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 · 4 · 5 novembro 2026 · Recife</span></div>
       <div class="row" style="gap:10px;margin-top:4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--primary)"></span><span class="eyebrow blue" style="color:var(--primary)">${esc(e.tagline.replace(' e ', ' & '))}</span></div>
       <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
@@ -194,8 +202,8 @@ function authView() {
     <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('public', 'i-s')} Porto Digital</b></div>
     <div class="eyebrow" style="text-align:center">Hub de conexões atlânticas · 1993 - 2026</div>`;
   else if (mode === 'register') inner = `${authTop('Executive Registration')}
-    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:#145283">3 · 4 · 5 novembro 2026 · Recife</span><span class="pill-tag" style="background:rgba(14,40,73,.15);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
-      <h1 class="display" style="font-size:30px;color:var(--ink)">OFG Recife 2026</h1><p style="color:#145283">${esc(e.tagline)}</p></div>
+    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:var(--hero-sub)">3 · 4 · 5 novembro 2026 · Recife</span><span class="pill-tag" style="background:var(--hero-tint);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
+      <h1 class="display" style="font-size:30px;color:var(--ink)">OFG Recife 2026</h1><p style="color:var(--hero-sub)">${esc(e.tagline)}</p></div>
     <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Apenas 250 executivos convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
     <form id="authForm" class="card" style="gap:18px">
       ${field('name', 'Nome', 'Seu nome completo', { req: 1, hint: 'Como deseja ser chamado', icon: 'badge', ac: 'name' })}
@@ -395,8 +403,8 @@ function eventView() {
   const e = S.ev.event, v = e.venue;
   return `
     <div class="card hero"><span class="pill-tag" style="background:var(--ink);color:var(--primary);align-self:flex-start">Edição especial · 33 anos</span>
-      <h2 class="display" style="font-size:26px;line-height:32px">${esc(e.theme.title)}</h2><p class="muted" style="color:#145283">${esc(e.theme.subtitle)}</p>
-      <div class="inner" style="background:rgba(14,40,73,.12);border:0"><div class="eyebrow">Tema central</div><b>${esc(e.theme.central)}</b></div></div>
+      <h2 class="display" style="font-size:26px;line-height:32px">${esc(e.theme.title)}</h2><p class="muted" style="color:var(--hero-sub)">${esc(e.theme.subtitle)}</p>
+      <div class="inner" style="background:var(--hero-tint);border:0"><div class="eyebrow">Tema central</div><b>${esc(e.theme.central)}</b></div></div>
     <div class="card"><div class="row between"><h3 class="h-md row" style="gap:8px">${icon('domain')}Local do Evento</h3></div>
       <div><b>${esc(v.name)}</b><div class="muted">${esc(v.address)}</div><div class="muted">${esc(v.room)}</div></div>
       <iframe class="map" title="Mapa" loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(v.mapsQuery)}&output=embed"></iframe>
@@ -421,7 +429,10 @@ function checkinView() {
 }
 
 function profileView() {
-  return `<form id="profForm" class="card" style="gap:16px">
+  const dark = getTheme() === 'dark';
+  return `<div class="card pad-s row"><div class="avatar" style="border-radius:12px">${icon(dark ? 'dark_mode' : 'light_mode')}</div><div class="grow"><div class="title-m">Modo escuro</div><div class="muted" id="themeLabel">${dark ? 'Ativo' : 'Desativado (modo claro)'}</div></div>
+    <label class="switch"><input type="checkbox" id="themeSwitch" role="switch" aria-label="Alternar modo escuro" ${dark ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>
+    <form id="profForm" class="card" style="gap:16px">
       ${['name:Nome', 'company:Empresa', 'role:Cargo', 'linkedin:LinkedIn'].map((x) => { const [k, l] = x.split(':'); return `<div class="field"><label>${l}</label><input name="${k}" value="${esc(S.me[k])}"></div>`; }).join('')}
       <div class="label">Interesses</div><div class="chips">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.me.interests.includes(i) ? 'on' : ''}" data-act="myint" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div>
       <button class="btn">Guardar</button>
@@ -497,6 +508,13 @@ document.addEventListener('submit', async (e) => {
 document.addEventListener('input', (e) => {
   const f = e.target.form;
   if (f && ['authForm', 'resetForm', 'recoverForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.id !== 'themeSwitch') return;
+  const dark = e.target.checked; applyTheme(dark ? 'dark' : 'light');
+  const l = document.getElementById('themeLabel'); if (l) l.textContent = dark ? 'Ativo' : 'Desativado (modo claro)';
+  const ic = e.target.closest('.card')?.querySelector('.avatar .material-symbols-outlined'); if (ic) ic.textContent = dark ? 'dark_mode' : 'light_mode';
 });
 
 let searchT;
