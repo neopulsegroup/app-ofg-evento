@@ -365,6 +365,66 @@ function chatView() {
 }
 const composer = () => `<form id="msgForm" class="composer"><input name="text" placeholder="Mensagem" autocomplete="off" maxlength="1000"><button class="btn" aria-label="Enviar">${icon('send')}</button></form>`;
 
+// ----- Leitor de QR code (câmera) -----
+let scanner = null;
+const JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+const loadJsQR = () => window.jsQR ? Promise.resolve() : new Promise((ok, fail) => { const s = document.createElement('script'); s.src = JSQR_URL; s.onload = ok; s.onerror = fail; document.head.append(s); });
+// aceita o link do QR (…/?checkin=CODIGO) ou o próprio código
+function parseCheckinCode(text) {
+  try { const c = new URL(text).searchParams.get('checkin'); if (c) return c.trim().toUpperCase(); } catch { /* não é URL */ }
+  return /^[A-Za-z0-9]{6,12}$/.test(text.trim()) ? text.trim().toUpperCase() : null;
+}
+async function openScanner() {
+  if (scanner) return;
+  const ov = document.createElement('div'); ov.id = 'scanner';
+  ov.innerHTML = '<video playsinline muted></video><div class="scan-frame"></div><div class="scan-bottom"><div class="scan-msg" id="scanMsg">A abrir a câmera…</div><button class="btn tonal" id="scanClose">Cancelar</button></div>';
+  document.body.append(ov);
+  const video = ov.querySelector('video'), msg = ov.querySelector('#scanMsg');
+  let stream = null, stop = false, last = 0;
+  const close = () => { stop = true; stream?.getTracks().forEach((t) => t.stop()); ov.remove(); scanner = null; };
+  scanner = { close };
+  ov.querySelector('#scanClose').onclick = close;
+  if (!navigator.mediaDevices?.getUserMedia) { msg.textContent = 'Este navegador não permite usar a câmera. Escreva o código manualmente.'; return; }
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false }); }
+  catch (err) { msg.textContent = err.name === 'NotAllowedError' ? 'Permissão da câmera negada. Ative-a nas definições do navegador ou escreva o código.' : 'Não foi possível abrir a câmera. Escreva o código manualmente.'; return; }
+  if (stop) { stream.getTracks().forEach((t) => t.stop()); return; }
+  video.srcObject = stream; await video.play().catch(() => {});
+  const detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+  if (!detector) { try { await loadJsQR(); } catch { msg.textContent = 'Não foi possível carregar o leitor de QR. Escreva o código manualmente.'; return; } }
+  msg.textContent = 'Aponte a câmera para o QR code da receção';
+  const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let busyCall = false;
+  const scan = async (ts) => {
+    if (stop) return;
+    if (!busyCall && ts - last > 120 && video.readyState >= 2 && video.videoWidth) {
+      last = ts; let text = null;
+      try {
+        if (detector) text = (await detector.detect(video))[0]?.rawValue;
+        else {
+          const sc = Math.min(1, 640 / video.videoWidth); canvas.width = Math.round(video.videoWidth * sc); canvas.height = Math.round(video.videoHeight * sc);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          text = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })?.data;
+        }
+      } catch { /* frame sem QR */ }
+      if (text) {
+        const code = parseCheckinCode(text);
+        if (!code) { msg.textContent = 'Este QR code não é de check-in. Tente outro.'; }
+        else {
+          busyCall = true; msg.textContent = 'A validar…';
+          try {
+            const r = await api('/checkin', { method: 'POST', body: { code } });
+            navigator.vibrate?.(80); close(); await loadMe(); S.err = ''; toast('Check-in feito ✔', r.title); render(); return;
+          } catch (e) { msg.textContent = e.message; await new Promise((ok) => setTimeout(ok, 1500)); busyCall = false; msg.textContent = 'Aponte a câmera para o QR code da receção'; }
+        }
+      }
+    }
+    requestAnimationFrame(scan);
+  };
+  requestAnimationFrame(scan);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) scanner?.close(); });
+
 // ----- Ao Vivo -----
 function liveView() {
   const t = nowTs();
@@ -423,7 +483,9 @@ function notesView() {
 
 function checkinView() {
   const days = S.ev.event.days;
-  return `<div class="card"><h2 class="title-l">Check-in</h2><p class="muted">Leia o QR code do dia na receção (abre esta app e faz o check-in) ou escreva o código abaixo.</p>
+  return `<div class="card"><h2 class="title-l">Check-in</h2><p class="muted">Leia o QR code do dia na receção com a câmera ou escreva o código abaixo.</p>
+      <button type="button" class="btn block" data-act="scan">${icon('photo_camera')} Ler QR code com a câmera</button>
+      <div class="row" style="gap:10px"><span class="hr grow"></span><span class="eyebrow">ou digite o código</span><span class="hr grow"></span></div>
       <form id="ckForm" class="row"><div class="field grow"><input name="code" placeholder="Código" autocapitalize="characters" required></div><button class="btn">Validar</button></form>${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}</div>
     ${days.map((d) => `<div class="card pad-s row"><div class="grow"><b>${fmtDay(d.date)}</b><div class="muted">${esc(d.title)}</div></div>${S.me.checkins[d.id] ? `<span class="pill-tag green">${icon('check', 'i-s')} Presente</span>` : '<span class="muted">—</span>'}</div>`).join('')}`;
 }
@@ -463,6 +525,7 @@ document.addEventListener('click', async (e) => {
     else if (act === 'notes') { S.view = { type: 'notes' }; const shown = S.notes.map((n) => ({ ...n })); await api('/notifications', { method: 'POST' }); S.notes = shown; render(); S.notes.forEach((n) => (n.read = true)); window.scrollTo(0, 0); return; }
     else if (act === 'profile') { S.view = { type: 'profile' }; S.chatWith = null; window.scrollTo(0, 0); }
     else if (act === 'checkin') { S.view = { type: 'checkin' }; S.err = ''; window.scrollTo(0, 0); }
+    else if (act === 'scan') { openScanner(); return; }
     else if (act === 'day') S.day = id;
     else if (act === 'room') { S.room = v; S.favOnly = false; }
     else if (act === 'favonly') { S.favOnly = !S.favOnly; if (S.favOnly) S.room = ''; }
