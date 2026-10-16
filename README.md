@@ -18,7 +18,7 @@ Em dev o PIN de recuperação de senha aparece no log do servidor (sem `RESEND_A
 
 ## Deploy na Vercel
 1. Importar o repositório (Framework: *Other*; `vercel.json` já define `public/`).
-2. Definir todas as variáveis de `.env.example`. Chaves push: `npm run vapid`.
+2. Variáveis: preencher `.env.local` e correr `vercel link` seguido de `npm run vercel:env` (aceita `-- --dry-run`, `-- --target preview`). Gera `ADMIN_KEY`, `APP_SECRET` e chaves VAPID se faltarem e guarda-os em `.env.vercel.generated` (ignorado pelo git).
 3. Email: criar conta no [Resend](https://resend.com), verificar o domínio e definir `RESEND_API_KEY` e `MAIL_FROM`.
 4. Abrir `/admin.html` e imprimir os QR codes de check-in.
 
