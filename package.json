@@ -10,7 +10,7 @@
     "vapid": "node -e \"console.log(require('web-push').generateVAPIDKeys())\""
   },
   "dependencies": {
-    "@upstash/redis": "^1.39.0",
+    "@supabase/supabase-js": "^2.118.0",
     "web-push": "^3.6.7"
   }
 }

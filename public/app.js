@@ -13,7 +13,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw new Error(j.error || 'Erro');
   return j;
 }
-function logout() { localStorage.removeItem('ofg_token'); sessionStorage.removeItem('ofg_token'); S.token = null; S.me = null; S.authMode = 'welcome'; clearTimeout(syncTimer); lastVer = lastUv = null; render(); }
+function logout() { localStorage.removeItem('ofg_token'); sessionStorage.removeItem('ofg_token'); S.token = null; S.me = null; S.authMode = 'welcome'; clearTimeout(syncTimer); try { rt?.removeAllChannels(); } catch {} rt = null; rtOk = false; render(); }
 
 const fmtDay = (d) => new Date(d + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
 const sessionTs = (s) => { const d = S.ev.event.days.find((x) => x.id === s.day); return new Date(`${d.date}T${s.start}:00-03:00`).getTime(); };
@@ -28,38 +28,56 @@ function toast(title, body) {
   setTimeout(() => el.remove(), 6000);
 }
 
-// ---------- sincronização (polling leve; a Vercel não suporta websockets) ----------
-let syncTimer, lastVer = null, lastUv = null, seenNotes = new Set(), pollMs = 6000, idleTicks = 0;
+// ---------- tempo real (Supabase Realtime) + heartbeat ----------
+// O servidor envia só um "sinal" por broadcast; o cliente refaz o fetch autenticado do que mudou.
+let syncTimer, rt = null, rtOk = false, seenNotes = new Set(), pending = new Set(), flushT = null;
+const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+
+function schedule(kind) { // junta rajadas de sinais (ex.: 250 votos seguidos) num único refresh
+  pending.add(kind); clearTimeout(flushT);
+  flushT = setTimeout(async () => {
+    const kinds = [...pending]; pending.clear();
+    try {
+      if (kinds.includes('ver')) {
+        const ev = await api('/event'); S.ev.announcements = ev.announcements;
+        await Promise.all([loadPolls(), loadQuestions(), S.tab === 'live' ? loadBoard() : null]);
+      }
+      if (kinds.includes('uv')) {
+        await Promise.all([loadConns(), loadNotes(), loadSugg()]);
+        if (S.chatWith) S.chat = await api('/messages/' + S.chatWith);
+        S.notes.filter((n) => !n.read && !seenNotes.has(n.id)).slice(0, 3).forEach((n) => toast(n.title, n.body));
+        S.notes.forEach((n) => seenNotes.add(n.id));
+      }
+    } catch { /* tenta no próximo sinal/heartbeat */ }
+    if (!typing()) { render(); if (S.chatWith) window.scrollTo(0, document.body.scrollHeight); }
+  }, 600);
+}
+
+async function connectRealtime() {
+  if (rt || !S.ev.realtime) return;
+  try {
+    const { createClient } = await import(SUPABASE_JS);
+    rt = createClient(S.ev.realtime.url, S.ev.realtime.anonKey, { realtime: { params: { eventsPerSecond: 5 } } });
+    rt.channel('ofg:all').on('broadcast', { event: 'ver' }, () => schedule('ver')).on('broadcast', { event: 'uv' }, () => schedule('uv'))
+      .subscribe((st) => { rtOk = st === 'SUBSCRIBED'; });
+    rt.channel('ofg:u:' + S.me.id).on('broadcast', { event: 'uv' }, () => schedule('uv')).subscribe();
+  } catch { rt = null; rtOk = false; } // sem Realtime: o heartbeat faz refresh completo
+}
+
 function startSync() {
   clearTimeout(syncTimer);
+  connectRealtime();
   const tick = async () => {
     if (!S.token || !S.me) return;
     if (!document.hidden) {
-      try {
-        const r = await api('/sync');
-        let changed = false;
-        if (lastVer !== null && r.ver !== lastVer) {
-          const ev = await api('/event'); S.ev.announcements = ev.announcements;
-          await Promise.all([loadPolls(), loadQuestions(), S.tab === 'live' ? loadBoard() : null]); changed = true;
-        }
-        if (lastUv !== null && r.uv !== lastUv) {
-          await Promise.all([loadConns(), loadNotes(), loadSugg()]);
-          if (S.chatWith) S.chat = await api('/messages/' + S.chatWith);
-          S.notes.filter((n) => !n.read && !seenNotes.has(n.id)).slice(0, 3).forEach((n) => toast(n.title, n.body));
-          changed = true;
-        }
-        S.notes.forEach((n) => seenNotes.add(n.id));
-        lastVer = r.ver; lastUv = r.uv;
-        idleTicks = changed ? 0 : idleTicks + 1;
-        if (changed && !typing()) { render(); if (S.chatWith) window.scrollTo(0, document.body.scrollHeight); }
-      } catch { /* offline: tenta no próximo ciclo */ }
+      try { await api('/sync'); } catch { /* offline */ }
+      if (!rtOk) schedule('ver'), schedule('uv'); // reserva: sem Realtime, refresh a cada minuto
     }
-    // abranda quando nada muda (poupa pedidos): 6s -> 15s
-    syncTimer = setTimeout(tick, idleTicks > 10 ? 15000 : pollMs);
+    syncTimer = setTimeout(tick, 60000);
   };
   tick();
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden && S.token) { idleTicks = 0; startSync(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.token && S.me) { schedule('ver'); schedule('uv'); } });
 const typing = () => ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
 
 // ---------- Web Push ----------
