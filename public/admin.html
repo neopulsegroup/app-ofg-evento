@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin · OFG Recife</title><link rel="stylesheet" href="/style.css">
+<title>Admin · OFG Recife</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&icon_names=arrow_back,auto_awesome,bolt,calendar_month,campaign,chat_bubble,check,check_circle,contact_page,domain,expand_more,groups,keyboard_arrow_up,near_me,notifications,notifications_active,person,person_add,qr_code_scanner,schedule,search,send,sensors&display=block" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script></head>
 <body><div class="shell"><div class="topbar"><h1>Admin · OFG Recife</h1></div><main id="m">
 <form id="k" class="card filled"><div class="field"><label>Chave de admin</label><input id="key" type="password" required></div><button class="btn">Entrar</button><div id="kerr" class="err"></div></form>
@@ -24,7 +27,7 @@ async function load() {
   <form id="ann" class="card filled"><div class="field"><label>Título</label><input name="title" required maxlength="80"></div><div class="field"><label>Mensagem</label><textarea name="body" maxlength="400"></textarea></div>
     <label class="row body-s"><input type="checkbox" name="alert"> Marcar como alerta (mudança de sala / atraso)</label><button class="btn">Enviar aviso</button><div id="aok" class="body-s"></div></form>
   <h3 class="title-m">Nova enquete</h3>
-  <form id="poll" class="card filled"><div class="field"><label>Sessão</label><select name="sessionId" style="height:56px;border-radius:8px;border:1px solid var(--md-outline);background:transparent;padding:0 12px">${ev.sessions.map((x) => `<option value="${x.id}">${esc(x.title.slice(0, 50))}</option>`).join('')}</select></div>
+  <form id="poll" class="card filled"><div class="field"><label>Sessão</label><select name="sessionId" style="height:56px;border-radius:8px;border:1px solid var(--border);background:transparent;padding:0 12px">${ev.sessions.map((x) => `<option value="${x.id}">${esc(x.title.slice(0, 50))}</option>`).join('')}</select></div>
     <div class="field"><label>Pergunta</label><input name="question" required></div><div class="field"><label>Opções (uma por linha, 2 a 6)</label><textarea name="options" required></textarea></div><button class="btn">Abrir enquete</button></form>
   ${s.polls.map((p) => `<div class="card row"><div class="grow">${esc(p.question)}<div class="body-s">${p.options.length} opções · ${Object.keys(p.votes).length} votos</div></div>${p.open ? `<button class="btn small tonal" onclick="closePoll('${p.id}')">Fechar</button>` : '<span class="chip static">Fechada</span>'}</div>`).join('')}
   <h3 class="title-m">Perguntas recebidas</h3>

@@ -4,7 +4,7 @@
   "description": "Programa, networking e avisos do evento OFG Recife 2026",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f9fc",
-  "theme_color": "#0b3d6e",
+  "background_color": "#111418",
+  "theme_color": "#111418",
   "icons": [{ "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
