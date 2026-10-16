@@ -13,11 +13,12 @@ npm install && npm start     # http://localhost:3000, dados em memória, admin e
 1. Importar o repositório na Vercel (Framework: *Other*; `vercel.json` já define `public/`).
 2. Storage → Marketplace → **Upstash Redis** → ligar ao projeto (cria `KV_REST_API_URL/TOKEN`).
 3. Gerar chaves push: `npm run vapid` e definir `VAPID_PUBLIC`, `VAPID_PRIVATE`.
-4. Definir `ADMIN_KEY`, `APP_SECRET` (ver `.env.example`) e fazer redeploy.
-5. Abrir `/admin.html`, imprimir os QR codes de check-in.
+4. Definir `ADMIN_KEY`, `APP_SECRET` (ver `.env.example`).
+5. Criar conta no [Resend](https://resend.com), verificar o domínio de envio e definir `RESEND_API_KEY` e `MAIL_FROM` (email de recuperação de senha). Fazer redeploy.
+6. Abrir `/admin.html`, imprimir os QR codes de check-in.
 
 ## Custos e limites (250 pessoas)
 - Cada telemóvel com a app aberta faz ~1 pedido/6 s (1 comando Redis). Num dia de evento estimam-se centenas de milhares de invocações: o plano **Hobby da Vercel é só não comercial e limitado**; para uso da empresa usar **Pro**. O Upstash gratuito (500 mil comandos/mês) não chega; usar pay-as-you-go (poucos USD).
 - Lembretes "começa em 10 min" são disparados por quem estiver a fazer polling (sem cron).
 - Push no iPhone só após "Adicionar ao ecrã principal" (iOS 16.4+).
-- Login por email sem verificação: quem souber o email entra na conta. Avaliar código por email.
+- Autenticação por email + senha (scrypt). Bloqueio de 10 min após 8 tentativas falhadas. Recuperação por PIN de 6 dígitos (15 min, 5 tentativas) enviado por email. Em desenvolvimento o PIN aparece no log do servidor.

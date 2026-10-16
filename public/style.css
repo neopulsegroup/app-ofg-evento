@@ -172,3 +172,14 @@ iframe.map { border: 0; border-radius: 16px; width: 100%; height: 200px; filter:
 .toast { pointer-events: auto; background: var(--elevated); color: var(--text); border: 1px solid rgba(147,197,253,.25); border-radius: 16px; padding: 12px 16px; max-width: 520px; width: 100%; box-shadow: 0 12px 32px -4px rgba(0,0,0,.6); animation: in .25s; }
 .toast b { display: block; }
 @keyframes in { from { opacity: 0; transform: translateY(-12px); } }
+
+/* autenticação */
+.inp { position: relative; display: flex; align-items: center; }
+.inp > .material-symbols-outlined { position: absolute; left: 14px; color: var(--text2); pointer-events: none; }
+.inp input { padding-left: 48px !important; height: 54px !important; padding-right: 48px !important; }
+.inp .eye { position: absolute; right: 8px; width: 40px; height: 40px; border: 0; background: none; color: var(--text2); cursor: pointer; display: grid; place-items: center; }
+.authbar { display: flex; align-items: center; gap: 10px; }
+.ofgtag { background: var(--brand); color: #d3e4ff; font: 800 12px Inter; letter-spacing: .08em; padding: 4px 10px; border-radius: 6px; }
+.hero-img { position: relative; height: 190px; border-radius: 14px; overflow: hidden; background: radial-gradient(120% 90% at 85% 10%, rgba(66,133,244,.45), transparent 55%), radial-gradient(90% 80% at 10% 100%, rgba(0,70,128,.9), transparent 60%), linear-gradient(160deg, #0b1b33, #111418 70%); display: flex; align-items: flex-end; }
+.hero-img::after { content: ''; position: absolute; right: 18px; top: 0; width: 64px; height: 75%; background: linear-gradient(180deg, rgba(147,197,253,.25), rgba(147,197,253,.03)); clip-path: polygon(20% 0, 100% 0, 85% 100%, 0 100%); }
+.hero-img > * { z-index: 1; }

@@ -4,7 +4,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const icon = (n, cls = '') => `<span class="material-symbols-outlined ${cls}">${n}</span>`;
 
 // ---------- estado ----------
-const S = { token: localStorage.getItem('ofg_token'), me: null, ev: null, tab: 'agenda', day: null, view: null, people: [], q: '', conns: [], sugg: [], polls: [], questions: [], notes: [], board: null, chat: [], chatWith: null, qSession: null, err: '', authMode: 'register', pickInterests: [] };
+const S = { token: localStorage.getItem('ofg_token') || sessionStorage.getItem('ofg_token'), me: null, ev: null, tab: 'agenda', day: null, view: null, people: [], q: '', conns: [], sugg: [], polls: [], questions: [], notes: [], board: null, chat: [], chatWith: null, qSession: null, err: '', authMode: 'welcome', recoverSent: false, recoverEmail: '', pickInterests: [] };
 
 async function api(path, opts = {}) {
   const r = await fetch('/api' + path, { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json', ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
@@ -13,7 +13,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw new Error(j.error || 'Erro');
   return j;
 }
-function logout() { localStorage.removeItem('ofg_token'); S.token = null; S.me = null; clearTimeout(syncTimer); lastVer = lastUv = null; render(); }
+function logout() { localStorage.removeItem('ofg_token'); sessionStorage.removeItem('ofg_token'); S.token = null; S.me = null; S.authMode = 'welcome'; clearTimeout(syncTimer); lastVer = lastUv = null; render(); }
 
 const fmtDay = (d) => new Date(d + 'T12:00:00').toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
 const sessionTs = (s) => { const d = S.ev.event.days.find((x) => x.id === s.day); return new Date(`${d.date}T${s.start}:00-03:00`).getTime(); };
@@ -90,6 +90,8 @@ const loadNotes = async () => (S.notes = await api('/notifications'));
 
 async function boot() {
   try { S.ev = await api('/event'); } catch { document.body.innerHTML = '<p style="padding:24px">Sem ligação. Tente novamente.</p>'; return; }
+  const rp = new URLSearchParams(location.search).get('reset');
+  if (rp && !S.token) { S.authMode = 'recover'; S.recoverEmail = rp; S.recoverSent = true; history.replaceState({}, '', '/'); }
   S.day = S.ev.event.days.find((d) => d.date === new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10))?.id || S.ev.event.days[0].id;
   if (S.token) {
     try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); startSync(); syncPush(); } catch { /* logout tratado */ }
@@ -145,24 +147,80 @@ function render() {
     ${S.chatWith ? composer() : `<nav class="nav"><div class="nav-inner">${tabs.map(([k, l, ic]) => `<button data-tab="${k}" class="${S.tab === k && !sub ? 'on' : ''} ${k === 'live' ? 'live-tab' : ''}"><span class="pill">${icon(ic, S.tab === k && !sub ? 'fill' : '')}</span>${l}${k === 'network' && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`}</div>`;
 }
 
+// ----- Autenticação (boas-vindas, criar conta, entrar, recuperar) -----
+const field = (name, label, ph, o = {}) => `<div class="field"><div class="row between"><label>${label}${o.req ? ' <span style="color:var(--primary)">*</span>' : ''}</label>${o.hint ? `<span class="eyebrow" style="font-weight:500">${o.hint}</span>` : ''}</div>
+  <div class="inp">${icon(o.icon || 'badge')}<input name="${name}" type="${o.type || 'text'}" placeholder="${esc(ph)}" ${o.req ? 'required' : ''} ${o.ac ? `autocomplete="${o.ac}"` : ''} ${o.min ? `minlength="${o.min}"` : ''} value="${esc(o.value || '')}">${o.pw ? `<button type="button" class="eye" data-act="togglepw" aria-label="Mostrar senha">${icon('visibility')}</button>` : ''}</div></div>`;
+const authTop = (title) => `<div class="authbar"><button class="tool" data-act="authmode" data-v="welcome" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button><span class="ofgtag">OFG</span><b class="grow clip">${title}</b></div>`;
+const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Boa Viagem Corporate · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
+const supportCard = (txt) => `<div class="card pad-s row" style="gap:12px">${icon('support_agent')}<p class="muted" style="text-align:center;flex:1">${txt}</p></div>`;
+
 function authView() {
-  const reg = S.authMode === 'register';
-  return `<div class="shell"><main style="padding-top:32px">
-    <div class="card hero"><div class="eyebrow">3 · 4 · 5 novembro 2026 · Recife</div><h1 class="display">${esc(S.ev?.event.name || '')}</h1><p class="title-m">${esc(S.ev?.event.tagline || '')}</p></div>
-    <h2 class="title-l">${reg ? 'Crie o seu perfil' : 'Entrar'}</h2>
-    <form id="authForm" class="card" style="gap:16px">
-      ${reg ? `<div class="field"><label>Nome <span style="color:var(--primary)">*</span></label><input name="name" required autocomplete="name"></div>` : ''}
-      <div class="field"><label>Email <span style="color:var(--primary)">*</span></label><input name="email" type="email" required autocomplete="email"></div>
-      ${reg ? `<div class="field"><label>Empresa</label><input name="company" autocomplete="organization"></div>
-      <div class="field"><label>Cargo</label><input name="role" autocomplete="organization-title"></div>
-      <div class="field"><label>LinkedIn (opcional)</label><input name="linkedin" placeholder="linkedin.com/in/..."></div>
-      <div><div class="label" style="margin-bottom:8px">Interesses (para sugestões de networking)</div><div class="chips">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.pickInterests.includes(i) ? 'on' : ''}" data-act="pick" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div></div>` : ''}
+  const mode = S.authMode, e = S.ev.event;
+  let inner;
+  if (mode === 'welcome') inner = `
+    <div class="card" style="padding:16px">
+      <div class="hero-img"><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:var(--text)"><span class="d" style="background:var(--live)"></span>Edição especial</span>
+        <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 · 4 · 5 novembro 2026 · Recife</span></div>
+      <div class="row" style="gap:10px;margin-top:4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--primary)"></span><span class="eyebrow blue" style="color:var(--primary)">${esc(e.tagline.replace(' e ', ' & '))}</span></div>
+      <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
+      <h2 class="h-md" style="color:var(--primary);font-weight:500">33 Anos Oporto Forte Group</h2>
+      <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Boa Viagem Corporate.</p>
+      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', '250 Líderes Convidados'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
+    <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
+      <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
+      <p class="muted">Já está no Boa Viagem Corporate? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
+    <button class="btn block" data-act="authmode" data-v="register">${icon('assignment_ind')} Criar meu perfil no evento</button>
+    <button class="btn tonal block" data-act="authmode" data-v="login">${icon('login')} Já tenho conta / Entrar</button>
+    ${venueLine()}
+    <p class="muted" style="text-align:center">Precisa de suporte com a sua inscrição? Fale com a organização.</p>
+    <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('public', 'i-s')} Porto Digital</b></div>
+    <div class="eyebrow" style="text-align:center">Hub de conexões atlânticas · 1993 - 2026</div>`;
+  else if (mode === 'register') inner = `${authTop('Executive Registration')}
+    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:#145283">3 · 4 · 5 novembro 2026 · Recife</span><span class="pill-tag" style="background:rgba(14,40,73,.15);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
+      <h1 class="display" style="font-size:30px;color:var(--ink)">OFG Recife 2026</h1><p style="color:#145283">${esc(e.tagline)}</p></div>
+    <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Apenas 250 executivos convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
+    <form id="authForm" class="card" style="gap:18px">
+      ${field('name', 'Nome', 'Seu nome completo', { req: 1, hint: 'Como deseja ser chamado', icon: 'badge', ac: 'name' })}
+      ${field('email', 'Email corporativo', 'seu.email@empresa.com', { req: 1, hint: 'Apenas e-mail empresarial', icon: 'alternate_email', type: 'email', ac: 'email' })}
+      ${field('company', 'Empresa', 'Nome da sua organização', { req: 1, icon: 'domain', ac: 'organization' })}
+      ${field('role', 'Cargo', 'Ex: Diretor de RH, CEO, Conselheiro…', { req: 1, icon: 'work', ac: 'organization-title' })}
+      ${field('linkedin', 'LinkedIn', 'linkedin.com/in/seuperfil', { hint: 'Opcional', icon: 'share' })}
+      ${field('password', 'Criar senha de acesso', 'Sua senha restrita', { req: 1, hint: 'Mínimo 8 dígitos', icon: 'lock', type: 'password', pw: 1, min: 8, ac: 'new-password' })}
+      <div><div class="row between"><span class="label" style="max-width:60%">Interesses (para sugestões de networking)</span><b style="color:var(--primary);font-size:12px">${S.pickInterests.length} selecionados</b></div><p class="muted" style="margin:4px 0 10px">Toque para selecionar os tópicos que você deseja debater em mesas temáticas.</p>
+        <div class="chips">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.pickInterests.includes(i) ? 'on' : ''}" data-act="pick" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div></div>
       ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
-      <button class="btn">${reg ? 'Entrar no evento' : 'Entrar'}</button>
-      <button type="button" class="btn text" data-act="authmode">${reg ? 'Já tenho conta' : 'Criar perfil'}</button>
-    </form>
-    <p class="muted">Os seus dados ficam visíveis apenas para os outros participantes do evento.</p>
-  </main></div>`;
+      <button class="btn block">Entrar no evento ${icon('arrow_forward', 'i-s')}</button>
+      <button type="button" class="btn text block" data-act="authmode" data-v="login" style="color:var(--text)">Já tenho conta</button></form>
+    <p class="muted row" style="gap:8px">${icon('shield', 'i-s')} Os seus dados ficam visíveis apenas para os outros participantes do evento.</p>`;
+  else if (mode === 'login') inner = `
+    <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
+      <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Rotas &amp; Oportunidades</span>
+      <h1 class="display">Acessar Credencial</h1><p class="muted" style="font-size:15px">Entre com seu e-mail corporativo cadastrado para acessar a programação, reuniões e networking.</p></div>
+    <div class="hero-img" style="height:150px;border-radius:20px"><b style="position:absolute;left:16px;bottom:14px" class="row">${icon('location_on')} Boa Viagem Corporate Hall · Recife/PE</b></div>
+    <form id="authForm" class="field" style="gap:16px">
+      ${field('email', 'E-mail corporativo', 'ex: nome@empresa.com', { req: 1, hint: 'Acesso homologado', icon: 'mail', type: 'email', ac: 'email' })}
+      ${field('password', 'Senha de acesso', 'Sua senha de acesso', { req: 1, icon: 'lock', type: 'password', pw: 1, ac: 'current-password' })}
+      <div class="row between"><label class="row" style="gap:10px"><input type="checkbox" name="remember" checked> Lembrar de mim</label><button type="button" class="btn text small" data-act="authmode" data-v="recover">Esqueceu a senha?</button></div>
+      ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
+      <button class="btn block">Entrar no App do Evento ${icon('arrow_forward', 'i-s')}</button></form>
+    <p style="text-align:center" class="muted">Ainda não tem cadastro? <button class="btn text small" data-act="authmode" data-v="register" style="padding:0 4px;height:auto">Crie o seu perfil</button></p>
+    ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (Sala 45).')}`;
+  else if (mode === 'recover') inner = `${authTop('Identity Verification')}
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('lock')}</div>
+      <span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>OFG Recife 2026 · Acesso seguro</span>
+      <h1 class="display">Recuperar acesso</h1>
+      <p class="muted" style="font-size:15px">${S.recoverSent ? `Enviámos um código PIN para <b>${esc(S.recoverEmail)}</b>. Introduza-o abaixo com a sua nova senha.` : 'Informe o e-mail corporativo que você utilizou no cadastro do evento. Enviaremos um link e código PIN para redefinir sua senha imediatamente.'}</p></div>
+    ${S.recoverSent ? `<form id="resetForm" class="card" style="gap:16px">
+        ${field('pin', 'Código PIN', '6 dígitos', { req: 1, icon: 'verified_user', ac: 'one-time-code' })}
+        ${field('password', 'Nova senha', 'Mínimo 8 caracteres', { req: 1, icon: 'lock', type: 'password', pw: 1, min: 8, ac: 'new-password' })}
+        ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}<button class="btn block">Redefinir e entrar ${icon('arrow_forward', 'i-s')}</button></form>`
+    : `<form id="recoverForm" class="card" style="gap:16px">${field('email', 'E-mail corporativo cadastrado', 'seu.email@empresa.com', { req: 1, hint: 'Corporativo', icon: 'alternate_email', type: 'email', ac: 'email', value: S.recoverEmail })}
+        ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}<button class="btn block">${icon('send', 'i-s')} Enviar Instruções de Recuperação</button></form>`}
+    <div class="card pad-s row top" style="background:var(--input)"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('assignment_ind')}</div><div><div class="eyebrow blue" style="color:var(--primary)">Assistência presencial</div><p class="muted"><b style="color:var(--text)">Participantes no local:</b> caso esteja no Boa Viagem Corporate, a equipa de credenciamento na <b style="color:var(--text)">Sala 45</b> pode ajudá-lo presencialmente.</p></div></div>
+    <button class="btn text block" data-act="authmode" data-v="login">${icon('arrow_back', 'i-s')} Lembrou sua senha? Voltar para o login</button>
+    <div class="eyebrow" style="text-align:center">Central OFG</div>
+    <p class="muted" style="text-align:center">Não recebeu o e-mail? ${S.recoverSent ? '<button class="btn text small" data-act="resend" style="padding:0 4px;height:auto;text-decoration:underline">Reenviar código</button>' : 'Verifique o spam ou tente novamente.'}</p>`;
+  return `<div class="shell"><main style="padding-top:calc(env(safe-area-inset-top) + 16px);padding-bottom:32px">${inner}</main></div>`;
 }
 
 // ----- Agenda -----
@@ -353,6 +411,12 @@ function profileView() {
       <button type="button" class="btn text" data-act="logout">Sair</button></form>`;
 }
 
+async function startSession(token, remember) {
+  S.token = token; S.err = ''; S.recoverSent = false;
+  (remember ? localStorage : sessionStorage).setItem('ofg_token', token);
+  await boot();
+}
+
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
   const tabBtn = e.target.closest('[data-tab]');
@@ -362,7 +426,9 @@ document.addEventListener('click', async (e) => {
   const { act, id, v } = el.dataset;
   e.stopPropagation();
   try {
-    if (act === 'authmode') { S.authMode = S.authMode === 'register' ? 'login' : 'register'; S.err = ''; }
+    if (act === 'authmode') { S.authMode = v; S.err = ''; if (v !== 'recover') { S.recoverSent = false; } window.scrollTo(0, 0); }
+    else if (act === 'togglepw') { const i = el.parentElement.querySelector('input'); i.type = i.type === 'password' ? 'text' : 'password'; el.innerHTML = icon(i.type === 'password' ? 'visibility' : 'visibility_off'); return; }
+    else if (act === 'resend') { await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); toast('Código reenviado', 'Verifique o seu email.'); }
     else if (act === 'pick') { S.pickInterests = S.pickInterests.includes(v) ? S.pickInterests.filter((x) => x !== v) : [...S.pickInterests, v]; }
     else if (act === 'back') { S.view = null; S.chatWith = null; await loadConns(); }
     else if (act === 'notes') { S.view = { type: 'notes' }; const shown = S.notes.map((n) => ({ ...n })); await api('/notifications', { method: 'POST' }); S.notes = shown; render(); S.notes.forEach((n) => (n.read = true)); window.scrollTo(0, 0); return; }
@@ -396,9 +462,10 @@ document.addEventListener('submit', async (e) => {
   try {
     if (f.id === 'authForm') {
       const r = await api(S.authMode === 'register' ? '/register' : '/login', { method: 'POST', body: { ...d, interests: S.pickInterests } });
-      S.token = r.token; localStorage.setItem('ofg_token', r.token); S.err = '';
-      await boot(); return;
+      return startSession(r.token, S.authMode === 'register' || !!d.remember);
     }
+    if (f.id === 'recoverForm') { S.recoverEmail = d.email.trim().toLowerCase(); await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); S.recoverSent = true; S.err = ''; }
+    if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); return startSession(r.token, true); }
     if (f.id === 'ckForm') { await doCheckin(d.code); }
     if (f.id === 'profForm') { await api('/me', { method: 'PUT', body: { ...d, interests: S.me.interests } }); await loadMe(); await Promise.all([loadSugg(), loadPeople()]); toast('Perfil guardado'); }
     if (f.id === 'qForm') { await api('/questions', { method: 'POST', body: { sessionId: f.dataset.id, text: d.text, anonymous: !!d.anon } }); await loadQuestions(); f.reset(); }
