@@ -159,13 +159,13 @@ function authView() {
   let inner;
   if (mode === 'welcome') inner = `
     <div class="card" style="padding:16px">
-      <div class="hero-img"><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:var(--text)"><span class="d" style="background:var(--live)"></span>Edição especial</span>
+      <div class="hero-img"><video src="/media/intro.mp4" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:var(--text)"><span class="d" style="background:var(--live)"></span>Edição especial</span>
         <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 · 4 · 5 novembro 2026 · Recife</span></div>
       <div class="row" style="gap:10px;margin-top:4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--primary)"></span><span class="eyebrow blue" style="color:var(--primary)">${esc(e.tagline.replace(' e ', ' & '))}</span></div>
       <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
       <h2 class="h-md" style="color:var(--primary);font-weight:500">33 Anos Oporto Forte Group</h2>
       <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Boa Viagem Corporate.</p>
-      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', '250 Líderes Convidados'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
+      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
     <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
       <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
       <p class="muted">Já está no Boa Viagem Corporate? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
