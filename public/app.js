@@ -120,7 +120,7 @@ async function boot() {
   if (rp && !S.token) { S.authMode = 'recover'; S.recoverEmail = rp; S.recoverSent = true; history.replaceState({}, '', '/'); }
   S.day = S.ev.event.days.find((d) => d.date === new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10))?.id || S.ev.event.days[0].id;
   if (S.token) {
-    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); startSync(); syncPush(); } catch { /* logout tratado */ }
+    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); startSync(); syncPush(); } catch (err) { if (S.token) { S.err = 'Não foi possível carregar a sua conta. Tente novamente.'; S.me = null; } /* 401: logout já tratado */ }
     const code = new URLSearchParams(location.search).get('checkin');
     if (code && S.me) { await doCheckin(code); history.replaceState({}, '', '/'); }
   }
@@ -485,16 +485,37 @@ document.addEventListener('click', async (e) => {
   if (S.chatWith) window.scrollTo(0, document.body.scrollHeight);
 }, true);
 
+// indicador de processamento central (spinner) enquanto uma operação de autenticação corre
+let busyAt = 0;
+function setBusy(on) {
+  let el = document.getElementById('busy');
+  if (on) {
+    if (el) return; busyAt = Date.now();
+    el = document.createElement('div'); el.id = 'busy'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.innerHTML = '<div class="spinner" aria-hidden="true"></div><div class="busy-txt">A processar…</div>';
+    document.body.append(el);
+  } else el?.remove();
+}
+const AUTH_FORMS = ['authForm', 'recoverForm', 'resetForm'];
+
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.target, d = Object.fromEntries(new FormData(f));
+  if (!AUTH_FORMS.includes(f.id)) return onSubmit(f, d);
+  if (document.getElementById('busy')) return; // evita duplo envio
+  setBusy(true);
+  try { await onSubmit(f, d); }
+  finally { await new Promise((r) => setTimeout(r, Math.max(0, 450 - (Date.now() - busyAt)))); setBusy(false); } // evita "flash" se for muito rápido
+});
+
+async function onSubmit(f, d) {
   try {
     if (f.id === 'authForm') {
       const r = await api(S.authMode === 'register' ? '/register' : '/login', { method: 'POST', body: { ...d, interests: S.pickInterests } });
-      return startSession(r.token, S.authMode === 'register' || !!d.remember);
+      await startSession(r.token, S.authMode === 'register' || !!d.remember); return;
     }
     if (f.id === 'recoverForm') { S.recoverEmail = d.email.trim().toLowerCase(); await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); S.recoverSent = true; S.err = ''; }
-    if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); return startSession(r.token, true); }
+    if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
     if (f.id === 'ckForm') { await doCheckin(d.code); }
     if (f.id === 'profForm') { await api('/me', { method: 'PUT', body: { ...d, interests: S.me.interests } }); await loadMe(); await Promise.all([loadSugg(), loadPeople()]); toast('Perfil guardado'); }
     if (f.id === 'qForm') { await api('/questions', { method: 'POST', body: { sessionId: f.dataset.id, text: d.text, anonymous: !!d.anon } }); await loadQuestions(); f.reset(); }
@@ -502,7 +523,7 @@ document.addEventListener('submit', async (e) => {
   } catch (err) { S.err = err.message; if (f.id !== 'ckForm') toast('Erro', err.message); }
   render();
   if (S.chatWith) { window.scrollTo(0, document.body.scrollHeight); $('#msgForm input')?.focus(); }
-});
+}
 
 // guarda o que foi escrito nos formulários de autenticação, para não perder ao voltar a desenhar a tela
 document.addEventListener('input', (e) => {
