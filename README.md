@@ -1,6 +1,6 @@
 # App OFG Recife 2026 (PWA)
 
-PWA estática (`public/`) + API serverless (`api/[...path].js` → `lib/handler.js`) na Vercel.
+PWA estática (`public/`) + API serverless (`api/index.js` (rewrite `/api/*` no `vercel.json`) → `lib/handler.js`) na Vercel.
 Dados em **Supabase Postgres** (`supabase/schema.sql`); tempo real por **Supabase Realtime** (broadcast: o servidor envia só um sinal e o cliente refaz o fetch autenticado) e **Web Push** (VAPID) para avisos com a app fechada.
 
 ## Desenvolvimento local
