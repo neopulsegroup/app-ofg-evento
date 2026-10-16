@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
   const r = await fetch('/api' + path, { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json', ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && S.token) { logout(); }
-  if (!r.ok) throw new Error(j.error || 'Erro');
+  if (!r.ok) throw new Error(j.error || `Erro do servidor (HTTP ${r.status})`);
   return j;
 }
 function logout() { localStorage.removeItem('ofg_token'); sessionStorage.removeItem('ofg_token'); S.token = null; S.me = null; S.authMode = 'welcome'; clearTimeout(syncTimer); try { rt?.removeAllChannels(); } catch {} rt = null; rtOk = false; render(); }
@@ -378,7 +378,7 @@ async function loadAdmin() {
   try {
     const [stats, users] = await Promise.all([api('/admin/stats'), api('/admin/users')]);
     S.adm = { stats, users };
-  } catch (e) { S.adm = { ...(S.adm || {}), error: e.message }; }
+  } catch (e) { console.error('admin', e); S.adm = { ...(S.adm || {}), error: e.message }; }
 }
 const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
 async function drawQRs() {
@@ -388,12 +388,13 @@ async function drawQRs() {
   if (!window.QRCode) return;
   els.forEach((el) => new window.QRCode(el, { text: `${location.origin}/?checkin=${el.dataset.qr}`, width: 148, height: 148, colorDark: '#000000', colorLight: '#ffffff' }));
 }
+const admErr = () => `<div class="card pad-s" style="border-color:rgba(239,68,68,.4)"><b>Não foi possível carregar o painel</b><div class="err">${esc(S.adm.error)}</div><button class="btn small" data-act="admrefresh">Tentar novamente</button></div>`;
 const kpi = (label, value, sub = '', ic = '') => `<div class="card pad-s" style="gap:2px"><div class="eyebrow row" style="gap:6px">${ic ? icon(ic, 'i-s') : ''}${label}</div><div class="display mono" style="font-size:26px">${value}</div>${sub ? `<div class="muted">${sub}</div>` : ''}</div>`;
 const hbar = (label, n, max, extra = '') => `<div><div class="row between"><span class="clip">${esc(label)}</span><b class="mono">${n}${extra}</b></div><div class="bar"><i style="width:${max ? Math.min(100, (n / max) * 100) : 0}%"></i></div></div>`;
 
 function adminDash() {
   const st = S.adm?.stats;
-  if (!st) return S.adm?.error ? `<div class="err">${esc(S.adm.error)}</div>` : '<div class="empty">A carregar…</div>';
+  if (!st) return S.adm?.error ? admErr() : '<div class="empty">A carregar…</div>';
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   const maxSign = Math.max(1, ...st.signups.map((x) => x[1]));
   return `
@@ -416,7 +417,7 @@ function adminDash() {
 
 function adminUsers() {
   const list = S.adm?.users;
-  if (!list) return S.adm?.error ? `<div class="err">${esc(S.adm.error)}</div>` : '<div class="empty">A carregar…</div>';
+  if (!list) return S.adm?.error ? admErr() : '<div class="empty">A carregar…</div>';
   const f = S.admFilter || 'all', qs = (S.admQ || '').toLowerCase();
   const shown = list.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length))
     && (!qs || [u.name, u.email, u.company, u.role].join(' ').toLowerCase().includes(qs)));
@@ -447,7 +448,7 @@ function adminComms() {
 
 function adminLive() {
   const st = S.adm?.stats;
-  if (!st) return S.adm?.error ? `<div class="err">${esc(S.adm.error)}</div>` : '<div class="empty">A carregar…</div>';
+  if (!st) return S.adm?.error ? admErr() : '<div class="empty">A carregar…</div>';
   const sess = S.ev.sessions.filter((s) => !['Receção', 'Networking'].includes(s.tag));
   const title = (id) => S.ev.sessions.find((s) => s.id === id)?.title || '';
   return `<form id="pollForm" class="card" style="gap:14px"><h3 class="h-md">Nova enquete</h3>
@@ -637,7 +638,7 @@ document.addEventListener('click', async (e) => {
     else if (act === 'checkin') { S.view = { type: 'checkin' }; S.err = ''; window.scrollTo(0, 0); }
     else if (act === 'scan') { openScanner(); return; }
     else if (act === 'mode') { localStorage.setItem('ofg_mode', adminOn() ? 'user' : 'admin'); S.view = null; S.chatWith = null; window.scrollTo(0, 0); if (adminOn()) { render(); await loadAdmin(); } }
-    else if (act === 'admrefresh') { await loadAdmin(); toast('Painel atualizado'); }
+    else if (act === 'admrefresh') { S.adm = null; render(); await loadAdmin(); if (!S.adm?.error) toast('Painel atualizado'); }
     else if (act === 'admfilter') S.admFilter = v;
     else if (act === 'role') {
       const u = S.adm.users.find((x) => x.id === id);
