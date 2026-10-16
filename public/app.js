@@ -154,7 +154,7 @@ function render() {
   else body = { agenda: agendaView, network: networkView, live: liveView, event: eventView }[S.tab]();
   const left = sub
     ? `<button class="tool" data-act="back" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button>`
-    : `<img src="/icons/icon.svg" alt="OFG">`;
+    : `<img src="/icons/icon-192.png" alt="OFG">`;
   const tools = S.chatWith ? '' : `<div class="tools">
       <button class="tool" data-act="checkin" aria-label="Check-in">${icon('qr_code_scanner')}</button>
       <button class="tool" data-act="notes" aria-label="Notificações">${icon('notifications')}${unread ? '<span class="dot"></span>' : ''}</button>

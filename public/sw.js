@@ -1,5 +1,5 @@
-const CACHE = 'ofg-v7';
-const SHELL = ['/', '/style.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg'];
+const CACHE = 'ofg-v8';
+const SHELL = ['/', '/style.css', '/app.js', '/manifest.webmanifest', '/icons/icon-192.png', '/favicon.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
@@ -18,7 +18,7 @@ self.addEventListener('push', (e) => {
   const d = e.data ? e.data.json() : { title: 'OFG Recife', body: '' };
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
     if (cs.some((c) => c.visibilityState === 'visible')) return; // app aberta: já mostra toast
-    return self.registration.showNotification(d.title, { body: d.body, tag: d.tag, icon: '/icons/icon.svg', badge: '/icons/icon.svg', data: d });
+    return self.registration.showNotification(d.title, { body: d.body, tag: d.tag, icon: '/icons/icon-192.png', badge: '/icons/icon-48.png', data: d });
   }));
 });
 self.addEventListener('notificationclick', (e) => {
