@@ -58,7 +58,7 @@ function schedule(kind) { // junta rajadas de sinais (ex.: 250 votos seguidos) n
       }
       if (adminOn()) await loadAdmin();
     } catch { /* tenta no próximo sinal/heartbeat */ }
-    if (!typing()) { render(); if (S.chatWith) window.scrollTo(0, document.body.scrollHeight); }
+    if (!typing()) { render(); if (S.chatWith) toBottom(); }
   }, 600);
 }
 
@@ -145,9 +145,22 @@ const pct = (u) => Math.min(100, Math.round(((u.shared?.length || 0) / Math.max(
 const sharedWith = (u) => (u.interests || []).filter((i) => S.me.interests.includes(i));
 const profilePct = () => Math.round(([S.me.name, S.me.company, S.me.role, S.me.linkedin, S.me.interests.length ? 'x' : ''].filter(Boolean).length / 5) * 100);
 
+// A página não rola: só o <main> rola, e cabeçalho/navegação ficam sempre fixos no ecrã (sem sticky/fixed).
+function toTop() { S.resetScroll = true; const m = $('main'); if (m) m.scrollTop = 0; setTimeout(() => { S.resetScroll = false; }, 0); }
+function toBottom() { S.stickBottom = true; const m = $('main'); if (m) m.scrollTop = m.scrollHeight; setTimeout(() => { S.stickBottom = false; }, 0); }
+let lastViewKey = '';
+function setApp(html) {
+  const app = $('#app'), old = app.querySelector('main');
+  const key = [S.token && S.me ? (adminOn() ? 'a' + (S.adminTab || 'dash') : S.tab) : 'auth' + S.authMode + S.recoverSent, S.view?.type, S.view?.id, S.chatWith].join('|');
+  const keep = old && key === lastViewKey ? old.scrollTop : 0; lastViewKey = key;
+  app.innerHTML = html;
+  const m = app.querySelector('main');
+  if (m) m.scrollTop = S.resetScroll ? 0 : S.stickBottom ? m.scrollHeight : keep;
+  window.scrollTo(0, 0); // evita o ecrã "deslocado" quando o teclado do telemóvel fecha
+}
+
 function render() {
-  const app = $('#app');
-  if (!S.token || !S.me) { app.innerHTML = authView(); return; }
+  if (!S.token || !S.me) { setApp(authView()); return; }
   const unread = S.notes.filter((n) => !n.read).length;
   const pend = S.conns.filter((c) => c.status === 'pending' && c.incoming).length;
   const titles = { agenda: 'Agenda', network: 'Networking', live: 'Ao Vivo', event: 'Evento' };
@@ -166,16 +179,16 @@ function render() {
     ? `<button class="tool" data-act="back" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button>`
     : `<img src="/icons/icon-192.png" alt="OFG">`;
   const adm = adminOn();
-  const modeBtn = S.me.isAdmin ? `<button class="mode-btn ${adm ? 'on' : ''}" data-act="mode" aria-label="Alternar entre administrador e usuário">${icon(adm ? 'admin_panel_settings' : 'person', 'i-s')}${adm ? 'Admin' : 'Usuário'}</button>` : '';
+  const modeBtn = S.me.isAdmin ? `<button class="mode-btn ${adm ? 'on' : ''}" data-act="mode" aria-label="Alternar entre administrador e usuário">${icon(adm ? 'admin_panel_settings' : 'person', 'i-s')}<span class="lbl">${adm ? 'Admin' : 'Usuário'}</span></button>` : '';
   const tools = S.chatWith ? '' : `<div class="tools">${modeBtn}
       ${adm ? '' : `<button class="tool" data-act="checkin" aria-label="Check-in">${icon('qr_code_scanner')}</button>`}
       <button class="tool" data-act="notes" aria-label="Notificações">${icon('notifications')}${unread ? '<span class="dot"></span>' : ''}</button>
       <button class="me-btn" data-act="profile" aria-label="Perfil">${icon('person', 'i-s')}</button></div>`;
   const tabs = adm ? [['dash', 'Painel', 'dashboard'], ['users', 'Inscritos', 'group'], ['comms', 'Avisos', 'campaign'], ['live', 'Enquetes', 'how_to_vote']] : [['agenda', 'Agenda', 'calendar_month'], ['network', 'Networking', 'groups'], ['live', 'Ao Vivo', 'sensors'], ['event', 'Evento', 'domain']];
   const cur = adm ? (S.adminTab || 'dash') : S.tab;
-  app.innerHTML = `<div class="shell"><div class="topbar"><div class="brand">${left}<div class="clip"><div class="eyebrow blue">OFG Recife 2026</div><h1>${esc(title)}</h1></div></div>${tools}</div>
+  setApp(`<div class="shell"><div class="topbar"><div class="brand">${left}<div class="clip"><div class="eyebrow blue">OFG Recife 2026</div><h1>${esc(title)}</h1></div></div>${tools}</div>
     <main>${body}</main>
-    ${S.chatWith ? composer() : `<nav class="nav"><div class="nav-inner">${tabs.map(([k, l, ic]) => `<button data-tab="${k}" class="${cur === k && !sub ? 'on' : ''} ${k === 'live' && !adm ? 'live-tab' : ''}"><span class="pill">${icon(ic, cur === k && !sub ? 'fill' : '')}</span>${l}${k === 'network' && !adm && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`}</div>`;
+    ${S.chatWith ? composer() : `<nav class="nav"><div class="nav-inner">${tabs.map(([k, l, ic]) => `<button data-tab="${k}" class="${cur === k && !sub ? 'on' : ''} ${k === 'live' && !adm ? 'live-tab' : ''}"><span class="pill">${icon(ic, cur === k && !sub ? 'fill' : '')}</span>${l}${k === 'network' && !adm && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`}</div>`);
   if (adm && !sub && (S.adminTab || 'dash') === 'dash') drawQRs();
 }
 
@@ -197,7 +210,7 @@ function authView() {
       <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
       <h2 class="h-md" style="color:var(--primary);font-weight:500">33 Anos Oporto Forte Group</h2>
       <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Boa Viagem Corporate.</p>
-      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
+      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="min-height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
     <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
       <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
       <p class="muted">Já está no Boa Viagem Corporate? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
@@ -279,7 +292,7 @@ function agendaView() {
   const todayId = days.find((d) => d.date === new Date(t - 3 * 3600e3).toISOString().slice(0, 10))?.id;
   return `
     ${next ? `<div class="card glow clickable" data-act="session" data-id="${next.id}"><div class="row top"><div class="avatar" style="background:rgba(239,68,68,.2);color:var(--live);border-radius:12px">${icon('sensors', 'fill')}</div>
-      <div class="grow"><div class="row" style="gap:6px"><span class="eyebrow" style="color:${live ? '#f87171' : 'var(--error)'}">${live ? 'Ao vivo' : 'Em breve'}</span><span class="eyebrow">· ${esc(next.room)}</span></div>
+      <div class="grow"><div class="row" style="gap:2px 6px;flex-wrap:wrap"><span class="eyebrow" style="color:${live ? '#f87171' : 'var(--error)'}">${live ? 'Ao vivo' : 'Em breve'}</span><span class="eyebrow">· ${esc(next.room)}</span></div>
       <h3 class="title-m">${esc(next.title)}</h3><p class="muted clip">${esc(next.desc)}</p></div>
       <div class="inner" style="text-align:center;padding:8px 12px"><div class="eyebrow">${live ? 'Termina' : 'Inicia em'}</div><div class="mono" style="font-weight:700;font-size:18px">${live ? next.end : countdown(sessionTs(next) - t)}</div></div></div></div>` : ''}
     ${ann ? `<div class="banner ${ann.kind === 'alert' ? 'alert' : ''}"><b>${esc(ann.title)}</b><div>${esc(ann.body)}</div><div class="muted">${timeAgo(ann.at)}</div></div>` : ''}
@@ -620,24 +633,24 @@ document.addEventListener('click', async (e) => {
   const tabBtn = e.target.closest('[data-tab]');
   if (tabBtn) {
     S.view = null; S.chatWith = null;
-    if (adminOn()) { S.adminTab = tabBtn.dataset.tab; render(); window.scrollTo(0, 0); loadAdmin().then(() => { if (adminOn() && !S.view) render(); }); return; }
-    S.tab = tabBtn.dataset.tab; render(); window.scrollTo(0, 0); if (S.tab === 'live') loadBoard().then(render); return;
+    if (adminOn()) { S.adminTab = tabBtn.dataset.tab; render(); toTop(); loadAdmin().then(() => { if (adminOn() && !S.view) render(); }); return; }
+    S.tab = tabBtn.dataset.tab; render(); toTop(); if (S.tab === 'live') loadBoard().then(render); return;
   }
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
   const { act, id, v } = el.dataset;
   e.stopPropagation();
   try {
-    if (act === 'authmode') { S.authMode = v; S.err = ''; if (v !== 'recover') { S.recoverSent = false; } window.scrollTo(0, 0); }
+    if (act === 'authmode') { S.authMode = v; S.err = ''; if (v !== 'recover') { S.recoverSent = false; } toTop(); }
     else if (act === 'togglepw') { const i = el.parentElement.querySelector('input'); i.type = i.type === 'password' ? 'text' : 'password'; el.innerHTML = icon(i.type === 'password' ? 'visibility' : 'visibility_off'); return; }
     else if (act === 'resend') { await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); toast('Código reenviado', 'Verifique o seu email.'); }
     else if (act === 'pick') { S.pickInterests = S.pickInterests.includes(v) ? S.pickInterests.filter((x) => x !== v) : [...S.pickInterests, v]; }
     else if (act === 'back') { S.view = null; S.chatWith = null; await loadConns(); }
-    else if (act === 'notes') { S.view = { type: 'notes' }; const shown = S.notes.map((n) => ({ ...n })); await api('/notifications', { method: 'POST' }); S.notes = shown; render(); S.notes.forEach((n) => (n.read = true)); window.scrollTo(0, 0); return; }
-    else if (act === 'profile') { S.view = { type: 'profile' }; S.chatWith = null; window.scrollTo(0, 0); }
-    else if (act === 'checkin') { S.view = { type: 'checkin' }; S.err = ''; window.scrollTo(0, 0); }
+    else if (act === 'notes') { S.view = { type: 'notes' }; const shown = S.notes.map((n) => ({ ...n })); await api('/notifications', { method: 'POST' }); S.notes = shown; render(); S.notes.forEach((n) => (n.read = true)); toTop(); return; }
+    else if (act === 'profile') { S.view = { type: 'profile' }; S.chatWith = null; toTop(); }
+    else if (act === 'checkin') { S.view = { type: 'checkin' }; S.err = ''; toTop(); }
     else if (act === 'scan') { openScanner(); return; }
-    else if (act === 'mode') { localStorage.setItem('ofg_mode', adminOn() ? 'user' : 'admin'); S.view = null; S.chatWith = null; window.scrollTo(0, 0); if (adminOn()) { render(); await loadAdmin(); } }
+    else if (act === 'mode') { localStorage.setItem('ofg_mode', adminOn() ? 'user' : 'admin'); S.view = null; S.chatWith = null; toTop(); if (adminOn()) { render(); await loadAdmin(); } }
     else if (act === 'admrefresh') { S.adm = null; render(); await loadAdmin(); if (!S.adm?.error) toast('Painel atualizado'); }
     else if (act === 'admfilter') S.admFilter = v;
     else if (act === 'role') {
@@ -654,8 +667,8 @@ document.addEventListener('click', async (e) => {
     else if (act === 'room') { S.room = v; S.favOnly = false; }
     else if (act === 'favonly') { S.favOnly = !S.favOnly; if (S.favOnly) S.room = ''; }
     else if (act === 'fav') { const r = await api('/favorite', { method: 'POST', body: { sessionId: id } }); S.me.favorites = r.favorites; if ('Notification' in window && Notification.permission === 'default') enablePush(); }
-    else if (act === 'session') { S.view = { type: 'session', id }; window.scrollTo(0, 0); }
-    else if (act === 'person') { S.view = { type: 'person', id }; window.scrollTo(0, 0); }
+    else if (act === 'session') { S.view = { type: 'session', id }; toTop(); }
+    else if (act === 'person') { S.view = { type: 'person', id }; toTop(); }
     else if (act === 'nettab') S.netTab = id;
     else if (act === 'interest') { S.interest = v; S.netTab = 'all'; }
     else if (act === 'connect') { await api('/connect', { method: 'POST', body: { to: id } }); await Promise.all([loadConns(), loadPeople(), loadSugg()]); toast('Pedido enviado', 'Será avisado quando aceitarem.'); }
@@ -669,7 +682,7 @@ document.addEventListener('click', async (e) => {
     else if (act === 'logout') return logout();
   } catch (err) { toast('Erro', err.message); }
   render();
-  if (S.chatWith) window.scrollTo(0, document.body.scrollHeight);
+  if (S.chatWith) toBottom();
 }, true);
 
 // indicador de processamento central (spinner) enquanto uma operação de autenticação corre
@@ -711,7 +724,7 @@ async function onSubmit(f, d) {
     if (f.id === 'msgForm') { if (!d.text.trim()) return; const txt = d.text; f.reset(); const msg = await api('/messages', { method: 'POST', body: { to: S.chatWith, text: txt } }); S.chat.push(msg); }
   } catch (err) { S.err = err.message; if (f.id !== 'ckForm') toast('Erro', err.message); }
   render();
-  if (S.chatWith) { window.scrollTo(0, document.body.scrollHeight); $('#msgForm input')?.focus(); }
+  if (S.chatWith) { toBottom(); $('#msgForm input')?.focus(); }
 }
 
 // guarda o que foi escrito nos formulários de autenticação, para não perder ao voltar a desenhar a tela
