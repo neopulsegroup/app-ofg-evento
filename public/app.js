@@ -117,6 +117,16 @@ const loadNotes = async () => (S.notes = await api('/notifications'));
 
 async function boot() {
   try { S.ev = await api('/event'); } catch { document.body.innerHTML = '<p style="padding:24px">Sem ligação. Tente novamente.</p>'; return; }
+  // regresso do login com Google (modo redirect): troca o código de uso único pela sessão
+  const sp = new URLSearchParams(location.search), gcode = sp.get('gcode'), gerr = sp.get('gerr');
+  if (gcode || gerr) history.replaceState({}, '', '/');
+  if (gcode) {
+    setBusy(true);
+    try { const r = await api('/google/exchange', { method: 'POST', body: { code: gcode } }); S.token = r.token; localStorage.setItem('ofg_token', r.token); }
+    catch (e) { S.authMode = 'login'; setTimeout(() => toast('Login com Google', e.message), 300); }
+    finally { setBusy(false); }
+  }
+  if (gerr) { S.authMode = 'login'; setTimeout(() => toast('Login com Google', 'Não foi possível validar a conta Google. Tente novamente.'), 300); }
   const rp = new URLSearchParams(location.search).get('reset');
   if (rp && !S.token) { S.authMode = 'recover'; S.recoverEmail = rp; S.recoverSent = true; history.replaceState({}, '', '/'); }
   S.day = S.ev.event.days.find((d) => d.date === new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10))?.id || S.ev.event.days[0].id;
@@ -213,7 +223,13 @@ async function mountGoogle() {
   const el = document.getElementById('gbtn'); if (!el || !S.ev?.googleClientId) return;
   try { await loadGIS(); } catch { el.innerHTML = '<div class="muted" style="text-align:center">Login com Google indisponível sem ligação aos servidores do Google.</div>'; return; }
   const g = window.google?.accounts?.id; if (!g) return;
-  if (!gisInit) { g.initialize({ client_id: S.ev.googleClientId, callback: onGoogle, ux_mode: 'popup', auto_select: false, cancel_on_tap_outside: true }); gisInit = true; }
+  if (!gisInit) {
+    // com URL canónica configurada: o Google devolve o utilizador para lá (modo redirect); senão, popup na própria página
+    const cfg = { client_id: S.ev.googleClientId, auto_select: false, cancel_on_tap_outside: true };
+    if (S.ev.googleLoginUri) Object.assign(cfg, { ux_mode: 'redirect', login_uri: S.ev.googleLoginUri });
+    else Object.assign(cfg, { ux_mode: 'popup', callback: onGoogle });
+    g.initialize(cfg); gisInit = true;
+  }
   const cur = document.getElementById('gbtn'); if (!cur) return;
   g.renderButton(cur, { type: 'standard', theme: getTheme() === 'dark' ? 'filled_black' : 'outline', size: 'large', text: 'continue_with', shape: 'pill', logo_alignment: 'left', locale: 'pt-BR', width: Math.min(400, Math.floor(cur.clientWidth) || 280) });
 }

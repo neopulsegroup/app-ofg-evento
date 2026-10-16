@@ -24,6 +24,7 @@ Em dev o PIN de recuperação de senha aparece no log do servidor (sem `RESEND_A
 
 ## Login com Google
 Gratuito (Google Identity Services). No Google Cloud Console: *APIs e serviços > Credenciais > ID do cliente OAuth* (tipo **Web**), com as origens JavaScript autorizadas `https://<domínio>` e `http://localhost:<porta>`; o ecrã de consentimento deve estar **"Em produção"**. Definir `GOOGLE_CLIENT_ID`.
+**Redirecionamento:** em produção (ou com `PUBLIC_URL` definido) o login usa o modo *redirect* do Google e termina sempre em `https://app-ofg-evento.vercel.app` (URL canónica; sem `PUBLIC_URL`, a Vercel de produção usa esse valor). É preciso adicionar `https://app-ofg-evento.vercel.app/api/google` em *URIs de redirecionamento autorizados* do cliente OAuth. O servidor valida o CSRF do Google, cria um código de uso único (60 s) e a app troca-o pela sessão (o token nunca aparece na URL). Em desenvolvimento local, sem `PUBLIC_URL`, usa popup.
 O servidor valida o ID token localmente (`lib/google.js`: assinatura RS256, `aud`, `iss`, `exp`, `email_verified`) e entra/cria a conta pelo email verificado; contas novas completam empresa e cargo antes de entrar. Conta existente com o mesmo email é ligada automaticamente.
 
 ## Limites a ter em conta (250 pessoas)

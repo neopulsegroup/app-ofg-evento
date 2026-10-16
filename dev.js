@@ -15,7 +15,7 @@ http.createServer((req, res) => {
   if (url.pathname.startsWith('/api/')) {
     let b = '';
     req.on('data', (c) => (b += c));
-    req.on('end', () => { try { req.body = b ? JSON.parse(b) : {}; } catch { req.body = {}; } handle(req, res); });
+    req.on('end', () => { try { req.body = !b ? {} : String(req.headers['content-type'] || '').includes('x-www-form-urlencoded') ? Object.fromEntries(new URLSearchParams(b)) : JSON.parse(b); } catch { req.body = {}; } handle(req, res); });
     return;
   }
   let file = path.normalize(path.join(PUBLIC, url.pathname === '/' ? 'index.html' : url.pathname));
