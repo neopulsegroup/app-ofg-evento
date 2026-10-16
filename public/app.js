@@ -51,11 +51,12 @@ function schedule(kind) { // junta rajadas de sinais (ex.: 250 votos seguidos) n
         await Promise.all([loadPolls(), loadQuestions(), S.tab === 'live' ? loadBoard() : null]);
       }
       if (kinds.includes('uv')) {
-        await Promise.all([loadConns(), loadNotes(), loadSugg()]);
+        await Promise.all([loadMe(), loadConns(), loadNotes(), loadSugg()]);
         if (S.chatWith) S.chat = await api('/messages/' + S.chatWith);
         S.notes.filter((n) => !n.read && !seenNotes.has(n.id)).slice(0, 3).forEach((n) => toast(n.title, n.body));
         S.notes.forEach((n) => seenNotes.add(n.id));
       }
+      if (adminOn()) await loadAdmin();
     } catch { /* tenta no próximo sinal/heartbeat */ }
     if (!typing()) { render(); if (S.chatWith) window.scrollTo(0, document.body.scrollHeight); }
   }, 600);
@@ -120,7 +121,7 @@ async function boot() {
   if (rp && !S.token) { S.authMode = 'recover'; S.recoverEmail = rp; S.recoverSent = true; history.replaceState({}, '', '/'); }
   S.day = S.ev.event.days.find((d) => d.date === new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10))?.id || S.ev.event.days[0].id;
   if (S.token) {
-    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); startSync(); syncPush(); } catch (err) { if (S.token) { S.err = 'Não foi possível carregar a sua conta. Tente novamente.'; S.me = null; } /* 401: logout já tratado */ }
+    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); if (adminOn()) await loadAdmin(); startSync(); syncPush(); } catch (err) { if (S.token) { S.err = 'Não foi possível carregar a sua conta. Tente novamente.'; S.me = null; } /* 401: logout já tratado */ }
     const code = new URLSearchParams(location.search).get('checkin');
     if (code && S.me) { await doCheckin(code); history.replaceState({}, '', '/'); }
   }
@@ -159,18 +160,23 @@ function render() {
   else if (v?.type === 'notes') { body = notesView(); title = 'Notificações'; }
   else if (v?.type === 'profile') { body = profileView(); title = 'O meu perfil'; }
   else if (v?.type === 'checkin') { body = checkinView(); title = 'Check-in'; }
+  else if (adminOn()) { const at = S.adminTab || 'dash'; body = { dash: adminDash, users: adminUsers, comms: adminComms, live: adminLive }[at](); title = { dash: 'Painel', users: 'Inscritos', comms: 'Avisos', live: 'Enquetes' }[at]; }
   else body = { agenda: agendaView, network: networkView, live: liveView, event: eventView }[S.tab]();
   const left = sub
     ? `<button class="tool" data-act="back" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button>`
     : `<img src="/icons/icon-192.png" alt="OFG">`;
-  const tools = S.chatWith ? '' : `<div class="tools">
-      <button class="tool" data-act="checkin" aria-label="Check-in">${icon('qr_code_scanner')}</button>
+  const adm = adminOn();
+  const modeBtn = S.me.isAdmin ? `<button class="mode-btn ${adm ? 'on' : ''}" data-act="mode" aria-label="Alternar entre administrador e usuário">${icon(adm ? 'admin_panel_settings' : 'person', 'i-s')}${adm ? 'Admin' : 'Usuário'}</button>` : '';
+  const tools = S.chatWith ? '' : `<div class="tools">${modeBtn}
+      ${adm ? '' : `<button class="tool" data-act="checkin" aria-label="Check-in">${icon('qr_code_scanner')}</button>`}
       <button class="tool" data-act="notes" aria-label="Notificações">${icon('notifications')}${unread ? '<span class="dot"></span>' : ''}</button>
       <button class="me-btn" data-act="profile" aria-label="Perfil">${icon('person', 'i-s')}</button></div>`;
-  const tabs = [['agenda', 'Agenda', 'calendar_month'], ['network', 'Networking', 'groups'], ['live', 'Ao Vivo', 'sensors'], ['event', 'Evento', 'domain']];
+  const tabs = adm ? [['dash', 'Painel', 'dashboard'], ['users', 'Inscritos', 'group'], ['comms', 'Avisos', 'campaign'], ['live', 'Enquetes', 'how_to_vote']] : [['agenda', 'Agenda', 'calendar_month'], ['network', 'Networking', 'groups'], ['live', 'Ao Vivo', 'sensors'], ['event', 'Evento', 'domain']];
+  const cur = adm ? (S.adminTab || 'dash') : S.tab;
   app.innerHTML = `<div class="shell"><div class="topbar"><div class="brand">${left}<div class="clip"><div class="eyebrow blue">OFG Recife 2026</div><h1>${esc(title)}</h1></div></div>${tools}</div>
     <main>${body}</main>
-    ${S.chatWith ? composer() : `<nav class="nav"><div class="nav-inner">${tabs.map(([k, l, ic]) => `<button data-tab="${k}" class="${S.tab === k && !sub ? 'on' : ''} ${k === 'live' ? 'live-tab' : ''}"><span class="pill">${icon(ic, S.tab === k && !sub ? 'fill' : '')}</span>${l}${k === 'network' && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`}</div>`;
+    ${S.chatWith ? composer() : `<nav class="nav"><div class="nav-inner">${tabs.map(([k, l, ic]) => `<button data-tab="${k}" class="${cur === k && !sub ? 'on' : ''} ${k === 'live' && !adm ? 'live-tab' : ''}"><span class="pill">${icon(ic, cur === k && !sub ? 'fill' : '')}</span>${l}${k === 'network' && !adm && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`}</div>`;
+  if (adm && !sub && (S.adminTab || 'dash') === 'dash') drawQRs();
 }
 
 // ----- Autenticação (boas-vindas, criar conta, entrar, recuperar) -----
@@ -365,6 +371,106 @@ function chatView() {
 }
 const composer = () => `<form id="msgForm" class="composer"><input name="text" placeholder="Mensagem" autocomplete="off" maxlength="1000"><button class="btn" aria-label="Enviar">${icon('send')}</button></form>`;
 
+// ----- Modo administrador -----
+const adminOn = () => !!S.me?.isAdmin && localStorage.getItem('ofg_mode') !== 'user';
+const fmtDT = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+async function loadAdmin() {
+  try {
+    const [stats, users] = await Promise.all([api('/admin/stats'), api('/admin/users')]);
+    S.adm = { stats, users };
+  } catch (e) { S.adm = { ...(S.adm || {}), error: e.message }; }
+}
+const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+async function drawQRs() {
+  const els = [...document.querySelectorAll('[data-qr]')].filter((el) => !el.firstChild);
+  if (!els.length) return;
+  if (!window.QRCode) await new Promise((ok) => { const s = document.createElement('script'); s.src = QR_URL; s.onload = ok; s.onerror = ok; document.head.append(s); });
+  if (!window.QRCode) return;
+  els.forEach((el) => new window.QRCode(el, { text: `${location.origin}/?checkin=${el.dataset.qr}`, width: 148, height: 148, colorDark: '#000000', colorLight: '#ffffff' }));
+}
+const kpi = (label, value, sub = '', ic = '') => `<div class="card pad-s" style="gap:2px"><div class="eyebrow row" style="gap:6px">${ic ? icon(ic, 'i-s') : ''}${label}</div><div class="display mono" style="font-size:26px">${value}</div>${sub ? `<div class="muted">${sub}</div>` : ''}</div>`;
+const hbar = (label, n, max, extra = '') => `<div><div class="row between"><span class="clip">${esc(label)}</span><b class="mono">${n}${extra}</b></div><div class="bar"><i style="width:${max ? Math.min(100, (n / max) * 100) : 0}%"></i></div></div>`;
+
+function adminDash() {
+  const st = S.adm?.stats;
+  if (!st) return S.adm?.error ? `<div class="err">${esc(S.adm.error)}</div>` : '<div class="empty">A carregar…</div>';
+  const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+  const maxSign = Math.max(1, ...st.signups.map((x) => x[1]));
+  return `
+    <div class="row between"><span class="eyebrow blue">Visão geral</span><button class="btn small tonal" data-act="admrefresh">Atualizar</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${kpi('Inscritos', st.users, `${st.admins} admin`, 'group')}
+      ${kpi('Com check-in', st.checkedIn, `${pct(st.checkedIn, st.users)}% dos inscritos`, 'check_circle')}
+      ${kpi('Conexões', st.connections, `${st.pending} pendentes`, 'contact_page')}
+      ${kpi('Mensagens', st.messages, '', 'chat_bubble')}
+      ${kpi('Perguntas', st.questions, `${st.votes} votos em ${st.pollsCount} enquetes`, 'how_to_vote')}
+      ${kpi('Push ativo', st.pushEnabled, `${pct(st.pushEnabled, st.users)}% dos inscritos`, 'notifications_active')}
+    </div>
+    <div class="card"><h3 class="h-md">Check-in por dia</h3>${st.perDay.map((d) => hbar(`${fmtDay(d.date)} · ${d.title}`, d.count, st.users, ` (${pct(d.count, st.users)}%)`)).join('')}</div>
+    <div class="card"><h3 class="h-md">Inscrições (últimos dias)</h3>${st.signups.length ? st.signups.map(([d, n]) => hbar(fmtDay(d), n, maxSign)).join('') : '<div class="muted">Sem inscrições.</div>'}</div>
+    <div class="card"><h3 class="h-md">Interesses mais populares</h3>${st.topInterests.map(([k, n]) => hbar(k, n, st.topInterests[0][1])).join('') || '<div class="muted">Sem dados.</div>'}</div>
+    <div class="card"><h3 class="h-md">Empresas com mais inscritos</h3>${st.topCompanies.map(([k, n]) => hbar(k, n, st.topCompanies[0][1])).join('') || '<div class="muted">Sem dados.</div>'}</div>
+    <div class="sec-title"><h3>QR codes de check-in</h3></div><p class="muted">Projete ou imprima na receção. Cada QR abre a app e faz o check-in do dia.</p>
+    ${st.codes.map((c) => `<div class="card pad-s row top"><div style="background:#fff;padding:8px;border-radius:12px" data-qr="${c.code}"></div><div class="grow"><b>${esc(c.title)}</b><div class="muted">${fmtDay(c.date)}</div><div class="title-l mono" style="letter-spacing:.08em">${c.code}</div><button class="btn small tonal" data-act="copylink" data-v="${c.code}">${icon('content_copy', 'i-s')} Copiar link</button></div></div>`).join('')}`;
+}
+
+function adminUsers() {
+  const list = S.adm?.users;
+  if (!list) return S.adm?.error ? `<div class="err">${esc(S.adm.error)}</div>` : '<div class="empty">A carregar…</div>';
+  const f = S.admFilter || 'all', qs = (S.admQ || '').toLowerCase();
+  const shown = list.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length))
+    && (!qs || [u.name, u.email, u.company, u.role].join(' ').toLowerCase().includes(qs)));
+  return `<div class="row between"><span class="eyebrow blue">${list.length} inscritos</span><button class="btn small tonal" data-act="exportcsv">${icon('download', 'i-s')} Exportar CSV</button></div>
+    <div class="search">${icon('search')}<input id="admSearch" type="search" placeholder="Nome, email, empresa ou cargo…" value="${esc(S.admQ || '')}"></div>
+    <div class="chips scroll-x">${[['all', 'Todos'], ['admin', 'Admins'], ['in', 'Com check-in'], ['out', 'Sem check-in']].map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-act="admfilter" data-v="${k}">${l}</button>`).join('')}</div>
+    <div id="admList" style="display:flex;flex-direction:column;gap:12px">${shown.map(adminUserRow).join('') || '<div class="empty">Ninguém encontrado.</div>'}</div>`;
+}
+function adminUserRow(u) {
+  const days = S.ev.event.days.filter((d) => u.checkins[d.id]).length;
+  const self = u.id === S.me.id;
+  return `<div class="card pad-s"><div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div></div></div>
+    <div class="chips"><span class="chip static">Check-in ${days}/${S.ev.event.days.length}</span><span class="chip static">${u.points} pts</span>${u.push ? '<span class="chip static on">Push</span>' : ''}<span class="chip static">${fmtDT(u.createdAt)}</span></div>
+    <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button></div>`;
+}
+
+function adminComms() {
+  const anns = S.ev.announcements;
+  return `<form id="annForm" class="card" style="gap:14px"><h3 class="h-md">Enviar aviso a todos</h3>
+      <div class="field"><label>Título <span style="color:var(--primary)">*</span></label><input name="title" required maxlength="80" placeholder="Ex.: Mudança de sala"></div>
+      <div class="field"><label>Mensagem</label><textarea name="body" maxlength="400" placeholder="Detalhes do aviso"></textarea></div>
+      <label class="row muted" style="gap:10px"><input type="checkbox" name="alert"> Marcar como alerta (mudança de sala, atraso…)</label>
+      <button class="btn block">${icon('send', 'i-s')} Enviar aviso</button>
+      <p class="muted">Chega em tempo real a quem tem a app aberta e por notificação push a quem as ativou.</p></form>
+    <div class="sec-title"><h3>Avisos enviados</h3></div>
+    ${anns.map((a) => `<div class="card pad-s ${a.kind === 'alert' ? '' : 'filled'}" ${a.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(a.title)}</b><span class="muted">${fmtDT(a.at)}</span></div><div class="muted">${esc(a.body)}</div></div>`).join('') || '<div class="empty">Nenhum aviso enviado.</div>'}`;
+}
+
+function adminLive() {
+  const st = S.adm?.stats;
+  if (!st) return S.adm?.error ? `<div class="err">${esc(S.adm.error)}</div>` : '<div class="empty">A carregar…</div>';
+  const sess = S.ev.sessions.filter((s) => !['Receção', 'Networking'].includes(s.tag));
+  const title = (id) => S.ev.sessions.find((s) => s.id === id)?.title || '';
+  return `<form id="pollForm" class="card" style="gap:14px"><h3 class="h-md">Nova enquete</h3>
+      <div class="field"><label>Sessão</label><select name="sessionId">${sess.map((s) => `<option value="${s.id}">${esc(s.start + ' · ' + s.title.slice(0, 48))}</option>`).join('')}</select></div>
+      <div class="field"><label>Pergunta <span style="color:var(--primary)">*</span></label><input name="question" required maxlength="200"></div>
+      <div class="field"><label>Opções (uma por linha, 2 a 6) <span style="color:var(--primary)">*</span></label><textarea name="options" required placeholder="Sim&#10;Não&#10;Talvez"></textarea></div>
+      <button class="btn block">Abrir enquete</button></form>
+    <div class="sec-title"><h3>Enquetes</h3></div>
+    ${st.polls.map((p) => { const tot = p.counts.reduce((a, b) => a + b, 0); return `<div class="card pad-s"><div class="row between"><span class="pill-tag ${p.open ? 'green' : 'gray'}">${p.open ? 'Aberta' : 'Fechada'}</span><span class="muted">${tot} voto${tot === 1 ? '' : 's'}</span></div><b>${esc(p.question)}</b><div class="muted">${esc(title(p.sessionId))}</div>
+      ${p.options.map((o, i) => hbar(o, p.counts[i], tot, tot ? ` · ${Math.round((p.counts[i] / tot) * 100)}%` : '')).join('')}
+      <div class="row">${p.open ? `<button class="btn small tonal grow" data-act="closepoll" data-id="${p.id}">Fechar votação</button>` : ''}<button class="btn small text" data-act="delpoll" data-id="${p.id}">${icon('delete', 'i-s')} Apagar</button></div></div>`; }).join('') || '<div class="empty">Nenhuma enquete.</div>'}
+    <div class="sec-title"><h3>Perguntas da audiência (${st.openQuestions.length})</h3></div>
+    ${[...st.openQuestions].sort((a, b) => b.upvotes.length - a.upvotes.length || b.at - a.at).map((x) => `<div class="card pad-s row top"><div class="grow"><div>${esc(x.text)}</div><div class="muted">▲ ${x.upvotes.length} · ${esc(title(x.sessionId))}${x.anonymous ? ' · anónimo' : ''}</div></div><button class="iconbtn" data-act="delq" data-id="${x.id}" aria-label="Apagar pergunta">${icon('delete')}</button></div>`).join('') || '<div class="empty">Sem perguntas.</div>'}`;
+}
+
+function exportCSV() {
+  const cols = ['Nome', 'Email', 'Empresa', 'Cargo', 'LinkedIn', 'Interesses', 'Pontos', 'Check-ins', 'Admin', 'Inscrito em'];
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = S.adm.users.map((u) => [u.name, u.email, u.company, u.role, u.linkedin, u.interests.join('; '), u.points, S.ev.event.days.filter((d) => u.checkins[d.id]).map((d) => d.date).join('; '), u.isAdmin ? 'sim' : '', new Date(u.createdAt).toISOString()]);
+  const csv = '﻿' + [cols, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'inscritos-ofg-recife-2026.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 // ----- Leitor de QR code (câmera) -----
 let scanner = null;
 const JSQR_URL = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
@@ -511,7 +617,11 @@ async function startSession(token, remember) {
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
   const tabBtn = e.target.closest('[data-tab]');
-  if (tabBtn) { S.tab = tabBtn.dataset.tab; S.view = null; S.chatWith = null; render(); window.scrollTo(0, 0); if (S.tab === 'live') loadBoard().then(render); return; }
+  if (tabBtn) {
+    S.view = null; S.chatWith = null;
+    if (adminOn()) { S.adminTab = tabBtn.dataset.tab; render(); window.scrollTo(0, 0); loadAdmin().then(() => { if (adminOn() && !S.view) render(); }); return; }
+    S.tab = tabBtn.dataset.tab; render(); window.scrollTo(0, 0); if (S.tab === 'live') loadBoard().then(render); return;
+  }
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
   const { act, id, v } = el.dataset;
@@ -526,6 +636,19 @@ document.addEventListener('click', async (e) => {
     else if (act === 'profile') { S.view = { type: 'profile' }; S.chatWith = null; window.scrollTo(0, 0); }
     else if (act === 'checkin') { S.view = { type: 'checkin' }; S.err = ''; window.scrollTo(0, 0); }
     else if (act === 'scan') { openScanner(); return; }
+    else if (act === 'mode') { localStorage.setItem('ofg_mode', adminOn() ? 'user' : 'admin'); S.view = null; S.chatWith = null; window.scrollTo(0, 0); if (adminOn()) { render(); await loadAdmin(); } }
+    else if (act === 'admrefresh') { await loadAdmin(); toast('Painel atualizado'); }
+    else if (act === 'admfilter') S.admFilter = v;
+    else if (act === 'role') {
+      const u = S.adm.users.find((x) => x.id === id);
+      if (!confirm(v === '1' ? `Promover ${u.name} a administrador? Terá acesso total ao painel.` : `Remover o acesso de administrador de ${u.name}?`)) return;
+      await api('/admin/users/role', { method: 'POST', body: { id, admin: v === '1' } }); await loadAdmin(); toast('Permissões atualizadas', u.name);
+    }
+    else if (act === 'exportcsv') { exportCSV(); return; }
+    else if (act === 'copylink') { await navigator.clipboard?.writeText(`${location.origin}/?checkin=${v}`); toast('Link copiado'); return; }
+    else if (act === 'closepoll') { await api('/admin/poll/close', { method: 'POST', body: { id } }); await loadAdmin(); }
+    else if (act === 'delpoll') { if (!confirm('Apagar esta enquete e os seus votos?')) return; await api('/admin/poll/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
+    else if (act === 'delq') { if (!confirm('Apagar esta pergunta?')) return; await api('/admin/question/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
     else if (act === 'day') S.day = id;
     else if (act === 'room') { S.room = v; S.favOnly = false; }
     else if (act === 'favonly') { S.favOnly = !S.favOnly; if (S.favOnly) S.room = ''; }
@@ -579,6 +702,8 @@ async function onSubmit(f, d) {
     }
     if (f.id === 'recoverForm') { S.recoverEmail = d.email.trim().toLowerCase(); await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); S.recoverSent = true; S.err = ''; }
     if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
+    if (f.id === 'annForm') { await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info' } }); const ev = await api('/event'); S.ev.announcements = ev.announcements; f.reset(); toast('Aviso enviado'); }
+    if (f.id === 'pollForm') { await api('/admin/poll', { method: 'POST', body: { sessionId: d.sessionId, question: d.question, options: d.options.split('\n') } }); await loadAdmin(); f.reset(); toast('Enquete aberta'); }
     if (f.id === 'ckForm') { await doCheckin(d.code); }
     if (f.id === 'profForm') { await api('/me', { method: 'PUT', body: { ...d, interests: S.me.interests } }); await loadMe(); await Promise.all([loadSugg(), loadPeople()]); toast('Perfil guardado'); }
     if (f.id === 'qForm') { await api('/questions', { method: 'POST', body: { sessionId: f.dataset.id, text: d.text, anonymous: !!d.anon } }); await loadQuestions(); f.reset(); }
@@ -599,6 +724,13 @@ document.addEventListener('change', (e) => {
   const dark = e.target.checked; applyTheme(dark ? 'dark' : 'light');
   const l = document.getElementById('themeLabel'); if (l) l.textContent = dark ? 'Ativo' : 'Desativado (modo claro)';
   const ic = e.target.closest('.card')?.querySelector('.avatar .material-symbols-outlined'); if (ic) ic.textContent = dark ? 'dark_mode' : 'light_mode';
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'admSearch') return;
+  S.admQ = e.target.value; const l = document.getElementById('admList'); if (!l) return;
+  const f = S.admFilter || 'all', qs = S.admQ.toLowerCase();
+  l.innerHTML = S.adm.users.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length)) && (!qs || [u.name, u.email, u.company, u.role].join(' ').toLowerCase().includes(qs))).map(adminUserRow).join('') || '<div class="empty">Ninguém encontrado.</div>';
 });
 
 let searchT;

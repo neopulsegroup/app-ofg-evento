@@ -67,3 +67,4 @@ alter table kv enable row level security;
 -- incrementos atómicos (evita ler-e-gravar pontos em paralelo)
 create or replace function add_points(uid text, n int) returns void language sql as $$ update users set points = points + n where id = uid $$;
 revoke all on function add_points(text, int) from public, anon, authenticated;
+alter table users add column if not exists is_admin boolean not null default false;
