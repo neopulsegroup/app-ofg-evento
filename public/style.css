@@ -299,3 +299,9 @@ iframe.map { border: 0; border-radius: 16px; width: 100%; height: 200px; filter:
 .row.between > .mono { flex: none; }
 .row.between > b:not(.mono) { flex: 1 1 0; min-width: 0; }
 .row.between > .clip { flex: 1 1 0; }
+
+/* login social */
+.gwrap { display: flex; flex-direction: column; gap: 14px; }
+.gbtn { display: flex; justify-content: center; min-height: 44px; width: 100%; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--muted); font: 700 11px Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }

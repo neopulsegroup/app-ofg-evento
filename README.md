@@ -22,6 +22,10 @@ Em dev o PIN de recuperação de senha aparece no log do servidor (sem `RESEND_A
 3. Email: criar conta no [Resend](https://resend.com), verificar o domínio e definir `RESEND_API_KEY` e `MAIL_FROM`.
 4. Abrir `/admin.html` e imprimir os QR codes de check-in.
 
+## Login com Google
+Gratuito (Google Identity Services). No Google Cloud Console: *APIs e serviços > Credenciais > ID do cliente OAuth* (tipo **Web**), com as origens JavaScript autorizadas `https://<domínio>` e `http://localhost:<porta>`; o ecrã de consentimento deve estar **"Em produção"**. Definir `GOOGLE_CLIENT_ID`.
+O servidor valida o ID token localmente (`lib/google.js`: assinatura RS256, `aud`, `iss`, `exp`, `email_verified`) e entra/cria a conta pelo email verificado; contas novas completam empresa e cargo antes de entrar. Conta existente com o mesmo email é ligada automaticamente.
+
 ## Limites a ter em conta (250 pessoas)
 - **Supabase Realtime Free: 200 conexões simultâneas.** Com 250 convidados use o plano Pro (500). Quem não conectar recebe atualizações pelo heartbeat de 60 s.
 - Vercel Hobby é só não comercial; para uso da empresa use Pro.

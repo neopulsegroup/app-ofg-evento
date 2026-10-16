@@ -160,7 +160,8 @@ function setApp(html) {
 }
 
 function render() {
-  if (!S.token || !S.me) { setApp(authView()); return; }
+  if (!S.token || !S.me) { setApp(authView()); mountGoogle(); return; }
+  if (!S.me.company || !S.me.role) { setApp(onboardView()); return; }
   const unread = S.notes.filter((n) => !n.read).length;
   const pend = S.conns.filter((c) => c.status === 'pending' && c.incoming).length;
   const titles = { agenda: 'Agenda', network: 'Networking', live: 'Ao Vivo', event: 'Evento' };
@@ -197,7 +198,42 @@ const field = (name, label, ph, o = {}) => `<div class="field"><div class="row b
   <div class="inp">${icon(o.icon || 'badge')}<input name="${name}" type="${o.type || 'text'}" placeholder="${esc(ph)}" ${o.req ? 'required' : ''} ${o.ac ? `autocomplete="${o.ac}"` : ''} ${o.min ? `minlength="${o.min}"` : ''} value="${esc(o.value || S.draft[name] || '')}">${o.pw ? `<button type="button" class="eye" data-act="togglepw" aria-label="Mostrar senha">${icon('visibility')}</button>` : ''}</div></div>`;
 const authTop = (title) => `<div class="authbar"><button class="tool" data-act="authmode" data-v="welcome" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button><span class="ofgtag">OFG</span><b class="grow clip">${title}</b></div>`;
 const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Boa Viagem Corporate · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
+const googleBlock = (sepAfter) => S.ev.googleClientId ? `<div class="gwrap">${sepAfter ? '<div class="or"><span>ou</span></div>' : ''}<div id="gbtn" class="gbtn" aria-label="Continuar com Google"></div>${sepAfter ? '' : '<div class="or"><span>ou preencha o formulário</span></div>'}</div>` : '';
 const supportCard = (txt) => `<div class="card pad-s row" style="gap:12px">${icon('support_agent')}<p class="muted" style="text-align:center;flex:1">${txt}</p></div>`;
+
+let gisReady = null, gisInit = false;
+const loadGIS = () => (gisReady ??= new Promise((ok, fail) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = ok; s.onerror = () => { gisReady = null; fail(new Error('gis')); }; document.head.append(s); }));
+async function onGoogle(resp) {
+  setBusy(true);
+  try { const r = await api('/google', { method: 'POST', body: { credential: resp.credential } }); await startSession(r.token, true); }
+  catch (e) { S.err = e.message; toast('Login com Google', e.message); render(); }
+  finally { setBusy(false); }
+}
+async function mountGoogle() {
+  const el = document.getElementById('gbtn'); if (!el || !S.ev?.googleClientId) return;
+  try { await loadGIS(); } catch { el.innerHTML = '<div class="muted" style="text-align:center">Login com Google indisponível sem ligação aos servidores do Google.</div>'; return; }
+  const g = window.google?.accounts?.id; if (!g) return;
+  if (!gisInit) { g.initialize({ client_id: S.ev.googleClientId, callback: onGoogle, ux_mode: 'popup', auto_select: false, cancel_on_tap_outside: true }); gisInit = true; }
+  const cur = document.getElementById('gbtn'); if (!cur) return;
+  g.renderButton(cur, { type: 'standard', theme: getTheme() === 'dark' ? 'filled_black' : 'outline', size: 'large', text: 'continue_with', shape: 'pill', logo_alignment: 'left', locale: 'pt-BR', width: Math.min(400, Math.floor(cur.clientWidth) || 280) });
+}
+
+// perfil incompleto (conta criada com Google): empresa e cargo são obrigatórios antes de entrar
+function onboardView() {
+  const first = (S.me.name || '').split(' ')[0];
+  return `<div class="shell"><main style="padding-top:calc(env(safe-area-inset-top) + 16px);padding-bottom:32px">
+    <div class="card hero"><div class="eyebrow">Quase lá</div><h1 class="display" style="font-size:28px;color:var(--ink)">Olá, ${esc(first)}!</h1><p style="color:var(--hero-sub)">Complete o seu perfil para entrar no evento e receber sugestões de networking.</p></div>
+    <form id="onbForm" class="card" style="gap:18px">
+      ${field('company', 'Empresa', 'Nome da sua organização', { req: 1, icon: 'domain', ac: 'organization' })}
+      ${field('role', 'Cargo', 'Ex: Diretor de RH, CEO, Conselheiro…', { req: 1, icon: 'work', ac: 'organization-title' })}
+      ${field('linkedin', 'LinkedIn', 'linkedin.com/in/seuperfil', { hint: 'Opcional', icon: 'share' })}
+      <div><div class="row between"><span class="label" style="max-width:60%">Interesses</span><b style="color:var(--primary);font-size:12px">${S.pickInterests.length} selecionados</b></div>
+        <div class="chips" style="margin-top:10px">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.pickInterests.includes(i) ? 'on' : ''}" data-act="pick" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div></div>
+      ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
+      <button class="btn block">Entrar no evento ${icon('arrow_forward', 'i-s')}</button>
+      <button type="button" class="btn text block" data-act="logout" style="color:var(--text)">Sair</button></form>
+  </main></div>`;
+}
 
 function authView() {
   const mode = S.authMode, e = S.ev.event;
@@ -224,6 +260,7 @@ function authView() {
     <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:var(--hero-sub)">3 · 4 · 5 novembro 2026 · Recife</span><span class="pill-tag" style="background:var(--hero-tint);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
       <h1 class="display" style="font-size:30px;color:var(--ink)">OFG Recife 2026</h1><p style="color:var(--hero-sub)">${esc(e.tagline)}</p></div>
     <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Apenas 250 executivos convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
+    ${googleBlock(false)}
     <form id="authForm" class="card" style="gap:18px">
       ${field('name', 'Nome', 'Seu nome completo', { req: 1, hint: 'Como deseja ser chamado', icon: 'badge', ac: 'name' })}
       ${field('email', 'Email corporativo', 'seu.email@empresa.com', { req: 1, hint: 'Apenas e-mail empresarial', icon: 'alternate_email', type: 'email', ac: 'email' })}
@@ -248,6 +285,7 @@ function authView() {
       <div class="row between"><label class="row" style="gap:10px"><input type="checkbox" name="remember" checked> Lembrar de mim</label><button type="button" class="btn text small" data-act="authmode" data-v="recover">Esqueceu a senha?</button></div>
       ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
       <button class="btn block">Entrar no App do Evento ${icon('arrow_forward', 'i-s')}</button></form>
+    ${googleBlock(true)}
     <p style="text-align:center" class="muted">Ainda não tem cadastro? <button class="btn text small" data-act="authmode" data-v="register" style="padding:0 4px;height:auto">Crie o seu perfil</button></p>
     ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (Sala 45).')}`;
   else if (mode === 'recover') inner = `${authTop('Identity Verification')}
@@ -696,7 +734,7 @@ function setBusy(on) {
     document.body.append(el);
   } else el?.remove();
 }
-const AUTH_FORMS = ['authForm', 'recoverForm', 'resetForm'];
+const AUTH_FORMS = ['authForm', 'recoverForm', 'resetForm', 'onbForm'];
 
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -718,6 +756,11 @@ async function onSubmit(f, d) {
     if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
     if (f.id === 'annForm') { await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info' } }); const ev = await api('/event'); S.ev.announcements = ev.announcements; f.reset(); toast('Aviso enviado'); }
     if (f.id === 'pollForm') { await api('/admin/poll', { method: 'POST', body: { sessionId: d.sessionId, question: d.question, options: d.options.split('\n') } }); await loadAdmin(); f.reset(); toast('Enquete aberta'); }
+    if (f.id === 'onbForm') {
+      if (!d.company.trim() || !d.role.trim()) throw new Error('Empresa e cargo são obrigatórios');
+      await api('/me', { method: 'PUT', body: { company: d.company, role: d.role, linkedin: d.linkedin, interests: S.pickInterests } });
+      await Promise.all([loadMe(), loadSugg(), loadPeople()]); S.draft = {}; S.err = ''; S.pickInterests = [];
+    }
     if (f.id === 'ckForm') { await doCheckin(d.code); }
     if (f.id === 'profForm') { await api('/me', { method: 'PUT', body: { ...d, interests: S.me.interests } }); await loadMe(); await Promise.all([loadSugg(), loadPeople()]); toast('Perfil guardado'); }
     if (f.id === 'qForm') { await api('/questions', { method: 'POST', body: { sessionId: f.dataset.id, text: d.text, anonymous: !!d.anon } }); await loadQuestions(); f.reset(); }
@@ -730,7 +773,7 @@ async function onSubmit(f, d) {
 // guarda o que foi escrito nos formulários de autenticação, para não perder ao voltar a desenhar a tela
 document.addEventListener('input', (e) => {
   const f = e.target.form;
-  if (f && ['authForm', 'resetForm', 'recoverForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
+  if (f && ['authForm', 'resetForm', 'recoverForm', 'onbForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
 });
 
 document.addEventListener('change', (e) => {
