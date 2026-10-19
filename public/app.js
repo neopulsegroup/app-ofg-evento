@@ -243,6 +243,7 @@ function onboardView() {
     <form id="onbForm" class="card" style="gap:18px">
       ${field('company', 'Empresa', 'Nome da sua organização', { req: 1, icon: 'domain', ac: 'organization' })}
       ${field('role', 'Cargo', 'Ex: Diretor de RH, CEO, Conselheiro…', { req: 1, icon: 'work', ac: 'organization-title' })}
+      ${field('phone', 'Telefone', '+55 81 90000-0000', { req: 1, hint: 'Com DDD / indicativo', icon: 'call', type: 'tel', ac: 'tel' })}
       ${field('linkedin', 'LinkedIn', 'linkedin.com/in/seuperfil', { hint: 'Opcional', icon: 'share' })}
       <div><div class="row between"><span class="label" style="max-width:60%">Interesses</span><b style="color:var(--primary);font-size:12px">${S.pickInterests.length} selecionados</b></div>
         <div class="chips" style="margin-top:10px">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.pickInterests.includes(i) ? 'on' : ''}" data-act="pick" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div></div>
@@ -284,6 +285,7 @@ function authView() {
       ${field('email', 'Email corporativo', 'seu.email@empresa.com', { req: 1, hint: 'Apenas e-mail empresarial', icon: 'alternate_email', type: 'email', ac: 'email' })}
       ${field('company', 'Empresa', 'Nome da sua organização', { req: 1, icon: 'domain', ac: 'organization' })}
       ${field('role', 'Cargo', 'Ex: Diretor de RH, CEO, Conselheiro…', { req: 1, icon: 'work', ac: 'organization-title' })}
+      ${field('phone', 'Telefone', '+55 81 90000-0000', { req: 1, hint: 'Com DDD / indicativo', icon: 'call', type: 'tel', ac: 'tel' })}
       ${field('linkedin', 'LinkedIn', 'linkedin.com/in/seuperfil', { hint: 'Opcional', icon: 'share' })}
       ${field('password', 'Criar senha de acesso', 'Sua senha restrita', { req: 1, hint: 'Mínimo 8 dígitos', icon: 'lock', type: 'password', pw: 1, min: 8, ac: 'new-password' })}
       <div><div class="row between"><span class="label" style="max-width:60%">Interesses (para sugestões de networking)</span><b style="color:var(--primary);font-size:12px">${S.pickInterests.length} selecionados</b></div><p class="muted" style="margin:4px 0 10px">Toque para selecionar os tópicos que você deseja debater em mesas temáticas.</p>
@@ -494,7 +496,7 @@ function adminUsers() {
   if (!list) return S.adm?.error ? admErr() : '<div class="empty">A carregar…</div>';
   const f = S.admFilter || 'all', qs = (S.admQ || '').toLowerCase();
   const shown = list.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length))
-    && (!qs || [u.name, u.email, u.company, u.role].join(' ').toLowerCase().includes(qs)));
+    && (!qs || [u.name, u.email, u.phone, u.company, u.role].join(' ').toLowerCase().includes(qs)));
   return `<div class="row between"><span class="eyebrow blue">${list.length} inscritos</span><button class="btn small tonal" data-act="exportcsv">${icon('download', 'i-s')} Exportar CSV</button></div>
     <div class="search">${icon('search')}<input id="admSearch" type="search" placeholder="Nome, email, empresa ou cargo…" value="${esc(S.admQ || '')}"></div>
     <div class="chips scroll-x">${[['all', 'Todos'], ['admin', 'Admins'], ['in', 'Com check-in'], ['out', 'Sem check-in']].map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-act="admfilter" data-v="${k}">${l}</button>`).join('')}</div>
@@ -503,7 +505,7 @@ function adminUsers() {
 function adminUserRow(u) {
   const days = S.ev.event.days.filter((d) => u.checkins[d.id]).length;
   const self = u.id === S.me.id;
-  return `<div class="card pad-s"><div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div></div></div>
+  return `<div class="card pad-s"><div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div>${u.phone ? `<div class="muted clip">${icon('call', 'i-s')} ${esc(u.phone)}</div>` : ''}</div></div>
     <div class="chips"><span class="chip static">Check-in ${days}/${S.ev.event.days.length}</span><span class="chip static">${u.points} pts</span>${u.push ? '<span class="chip static on">Push</span>' : ''}<span class="chip static">${fmtDT(u.createdAt)}</span></div>
     <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button></div>`;
 }
@@ -539,9 +541,9 @@ function adminLive() {
 }
 
 function exportCSV() {
-  const cols = ['Nome', 'Email', 'Empresa', 'Cargo', 'LinkedIn', 'Interesses', 'Pontos', 'Check-ins', 'Admin', 'Inscrito em'];
+  const cols = ['Nome', 'Email', 'Telefone', 'Empresa', 'Cargo', 'LinkedIn', 'Interesses', 'Pontos', 'Check-ins', 'Admin', 'Inscrito em'];
   const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = S.adm.users.map((u) => [u.name, u.email, u.company, u.role, u.linkedin, u.interests.join('; '), u.points, S.ev.event.days.filter((d) => u.checkins[d.id]).map((d) => d.date).join('; '), u.isAdmin ? 'sim' : '', new Date(u.createdAt).toISOString()]);
+  const rows = S.adm.users.map((u) => [u.name, u.email, u.phone, u.company, u.role, u.linkedin, u.interests.join('; '), u.points, S.ev.event.days.filter((d) => u.checkins[d.id]).map((d) => d.date).join('; '), u.isAdmin ? 'sim' : '', new Date(u.createdAt).toISOString()]);
   const csv = '﻿' + [cols, ...rows].map((r) => r.map(cell).join(',')).join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'inscritos-ofg-recife-2026.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
@@ -676,7 +678,7 @@ function profileView() {
   return `<div class="card pad-s row"><div class="avatar" style="border-radius:12px">${icon(dark ? 'dark_mode' : 'light_mode')}</div><div class="grow"><div class="title-m">Modo escuro</div><div class="muted" id="themeLabel">${dark ? 'Ativo' : 'Desativado (modo claro)'}</div></div>
     <label class="switch"><input type="checkbox" id="themeSwitch" role="switch" aria-label="Alternar modo escuro" ${dark ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>
     <form id="profForm" class="card" style="gap:16px">
-      ${['name:Nome', 'company:Empresa', 'role:Cargo', 'linkedin:LinkedIn'].map((x) => { const [k, l] = x.split(':'); return `<div class="field"><label>${l}</label><input name="${k}" value="${esc(S.me[k])}"></div>`; }).join('')}
+      ${['name:Nome', 'company:Empresa', 'role:Cargo', 'phone:Telefone', 'linkedin:LinkedIn'].map((x) => { const [k, l] = x.split(':'); return `<div class="field"><label>${l}</label><input name="${k}" value="${esc(S.me[k])}"></div>`; }).join('')}
       <div class="label">Interesses</div><div class="chips">${S.ev.interests.map((i) => `<button type="button" class="chip ${S.me.interests.includes(i) ? 'on' : ''}" data-act="myint" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div>
       <button class="btn">Guardar</button>
       ${'Notification' in window && Notification.permission !== 'granted' ? '<button type="button" class="btn tonal" data-act="notif">Ativar notificações</button>' : ''}
@@ -782,8 +784,8 @@ async function onSubmit(f, d) {
     if (f.id === 'annForm') { await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info' } }); const ev = await api('/event'); S.ev.announcements = ev.announcements; f.reset(); toast('Aviso enviado'); }
     if (f.id === 'pollForm') { await api('/admin/poll', { method: 'POST', body: { sessionId: d.sessionId, question: d.question, options: d.options.split('\n') } }); await loadAdmin(); f.reset(); toast('Enquete aberta'); }
     if (f.id === 'onbForm') {
-      if (!d.company.trim() || !d.role.trim()) throw new Error('Empresa e cargo são obrigatórios');
-      await api('/me', { method: 'PUT', body: { company: d.company, role: d.role, linkedin: d.linkedin, interests: S.pickInterests } });
+      if (!d.company.trim() || !d.role.trim() || !d.phone.trim()) throw new Error('Empresa, cargo e telefone são obrigatórios');
+      await api('/me', { method: 'PUT', body: { company: d.company, role: d.role, phone: d.phone, linkedin: d.linkedin, interests: S.pickInterests } });
       await Promise.all([loadMe(), loadSugg(), loadPeople()]); S.draft = {}; S.err = ''; S.pickInterests = [];
     }
     if (f.id === 'ckForm') { await doCheckin(d.code); }
@@ -812,7 +814,7 @@ document.addEventListener('input', (e) => {
   if (e.target.id !== 'admSearch') return;
   S.admQ = e.target.value; const l = document.getElementById('admList'); if (!l) return;
   const f = S.admFilter || 'all', qs = S.admQ.toLowerCase();
-  l.innerHTML = S.adm.users.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length)) && (!qs || [u.name, u.email, u.company, u.role].join(' ').toLowerCase().includes(qs))).map(adminUserRow).join('') || '<div class="empty">Ninguém encontrado.</div>';
+  l.innerHTML = S.adm.users.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length)) && (!qs || [u.name, u.email, u.phone, u.company, u.role].join(' ').toLowerCase().includes(qs))).map(adminUserRow).join('') || '<div class="empty">Ninguém encontrado.</div>';
 });
 
 let searchT;
