@@ -363,7 +363,7 @@ html.doc, body.doc { height: auto; min-height: 100%; overflow: auto; }
 .pc.active { transition: transform .08s linear; }
 .pc-inside { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; border: 1px solid rgba(255, 255, 255, .2); color: #fff;
   background: radial-gradient(circle at var(--px) var(--py), rgba(150, 200, 255, .5), transparent 55%), radial-gradient(circle at 85% 70%, rgba(190, 120, 255, .28), transparent 50%), linear-gradient(160deg, #0b1d3a, #14396b 55%, #0a1730); }
-.pc-mark { position: absolute; aspect-ratio: 1; opacity: .9; transform: rotate(var(--r)) translate(calc((var(--px) - 50%) * -.12), calc((var(--py) - 50%) * -.12));
+.pc-mark { position: absolute; aspect-ratio: 1; opacity: .38; z-index: 1; transform: rotate(var(--r)) translate(calc((var(--px) - 50%) * -.12), calc((var(--py) - 50%) * -.12));
   background: linear-gradient(120deg, #6f7f97 0%, #f6f9ff 18%, #8190a8 34%, #dfe8f6 50%, #75849c 66%, #f2f6fd 82%, #6f7f97 100%) var(--px) var(--py) / 320% 320%;
   -webkit-mask: url(/media/logo-metal.png) center / contain no-repeat; mask: url(/media/logo-metal.png) center / contain no-repeat; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .35)); }
 .pc-avatar { position: absolute; left: 50%; bottom: 0; height: 76%; max-width: 100%; transform: translateX(calc(-50% + (var(--px) - 50%) * .06)); object-fit: contain; object-position: bottom; filter: drop-shadow(0 14px 20px rgba(0, 0, 0, .45)); z-index: 2; }
@@ -372,10 +372,11 @@ html.doc, body.doc { height: auto; min-height: 100%; overflow: auto; }
   background: repeating-linear-gradient(115deg, #ff7ad9 0%, #7affc7 10%, #7ab8ff 20%, #ffe27a 30%, #ff7ad9 40%) var(--px) var(--py) / 300% 300%;
   -webkit-mask-image: radial-gradient(circle at var(--px) var(--py), #000 0, transparent 70%); mask-image: radial-gradient(circle at var(--px) var(--py), #000 0, transparent 70%); }
 .pc-glare { position: absolute; inset: 0; z-index: 4; pointer-events: none; mix-blend-mode: overlay; opacity: var(--o); background: radial-gradient(circle at var(--px) var(--py), rgba(255, 255, 255, .55), transparent 45%); }
-.pc-head { position: absolute; top: 5.5%; left: 0; right: 0; z-index: 5; text-align: center; padding: 0 16px; text-shadow: 0 2px 12px rgba(0, 0, 0, .55); }
-.pc-event { font: 700 10px Inter, sans-serif; letter-spacing: .16em; opacity: .8; }
+.pc-scrim { position: absolute; left: 0; right: 0; top: 0; height: 34%; z-index: 4; pointer-events: none; background: linear-gradient(to bottom, rgba(6, 14, 32, .9), rgba(6, 14, 32, .55) 55%, rgba(6, 14, 32, 0)); }
+.pc-head { position: absolute; top: 5.5%; left: 0; right: 0; z-index: 5; text-align: center; padding: 0 16px; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8), 0 2px 14px rgba(0, 0, 0, .7); }
+.pc-event { font: 800 11px Inter, sans-serif; letter-spacing: .16em; color: #fff; }
 .pc-head h2 { font: 800 26px/1.1 'Plus Jakarta Sans', Inter, sans-serif; margin: 6px 0 4px; overflow-wrap: anywhere; }
-.pc-head p { margin: 0; font-size: 13px; opacity: .88; }
+.pc-head p { margin: 0; font-size: 14px; font-weight: 600; color: #fff; }
 .pc-foot { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 22px; background: rgba(8, 18, 40, .58); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, .14); }
 .pc-who { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .pc-who b { font: 800 16px 'Plus Jakarta Sans', Inter, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
