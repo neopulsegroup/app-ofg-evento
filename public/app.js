@@ -1,7 +1,9 @@
+import { processPhoto, badgeHtml, mountBadge, badgeBlob } from '/badge.js';
 // OFG Recife 2026 – PWA (vanilla JS, sem build)
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const icon = (n, cls = '') => `<span class="material-symbols-outlined ${cls}">${n}</span>`;
+const ICONS = {"admin_panel_settings":"user-gear","alternate_email":"at","arrow_back":"arrow-left","arrow_forward":"arrow-right","assignment_ind":"id-badge","auto_awesome":"sparkles","badge":"id-badge","bolt":"bolt","calendar_month":"calendar","call":"phone-call","campaign":"megaphone","chat_bubble":"comment","check":"check","check_circle":"check-circle","chevron_right":"angle-small-right","contact_page":"address-book","content_copy":"copy","dark_mode":"moon","dashboard":"dashboard","delete":"trash","domain":"building","download":"download","event":"calendar-check","expand_more":"angle-small-down","group":"users","groups":"users-alt","help":"interrogation","how_to_vote":"ballot-check","hub":"people-network-partner","keyboard_arrow_up":"angle-small-up","light_mode":"sun","lightbulb":"lightbulb-on","location_on":"map-marker","lock":"lock","login":"sign-in-alt","mail":"envelope","near_me":"location-arrow","notifications":"bell","notifications_active":"bell-ring","open_in_new":"up-right-from-square","person":"user","person_add":"user-add","person_search":"member-search","photo_camera":"camera","public":"globe","qr_code_scanner":"qr-scan","schedule":"clock","search":"search","send":"paper-plane","sensors":"wifi","share":"share","shield":"shield","support_agent":"headset","verified_user":"shield-check","visibility":"eye","visibility_off":"eye-crossed","volunteer_activism":"hand-holding-heart","warning":"triangle-warning","work":"briefcase"}; // nomes lógicos → Flaticon UIcons (regular rounded)
+const icon = (n, cls = '') => `<i class="fi fi-rr-${ICONS[n] || n} ${cls}"></i>`;
 
 // ---------- tema (escuro/claro) ----------
 // o modo claro é o padrão; só fica escuro se a pessoa o escolher (guardado como 'dark')
@@ -28,6 +30,7 @@ const fmtDay = (d) => new Date(d + 'T12:00:00').toLocaleDateString('pt-PT', { we
 const sessionTs = (s) => { const d = S.ev.event.days.find((x) => x.id === s.day); return new Date(`${d.date}T${s.start}:00-03:00`).getTime(); };
 const sessionEnd = (s) => { const d = S.ev.event.days.find((x) => x.id === s.day); return new Date(`${d.date}T${s.end}:00-03:00`).getTime(); };
 const initials = (n) => n.split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+const av = (u, cls = '') => u.photo ? `<div class="avatar ${cls} has-img"><img src="${esc(u.photo)}" alt="" loading="lazy"></div>` : `<div class="avatar ${cls}">${esc(initials(u.name))}</div>`;
 const timeAgo = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.round(m / 60)} h`; };
 
 function toast(title, body) {
@@ -184,6 +187,7 @@ function render() {
   else if (v?.type === 'person') { body = personView(v.id); title = 'Perfil'; }
   else if (v?.type === 'notes') { body = notesView(); title = 'Notificações'; }
   else if (v?.type === 'profile') { body = profileView(); title = 'O meu perfil'; }
+  else if (v?.type === 'badge') { body = badgeView(); title = 'Crachá do evento'; }
   else if (v?.type === 'checkin') { body = checkinView(); title = 'Check-in'; }
   else if (adminOn()) { const at = S.adminTab || 'dash'; body = { dash: adminDash, users: adminUsers, comms: adminComms, live: adminLive }[at](); title = { dash: 'Painel', users: 'Inscritos', comms: 'Avisos', live: 'Enquetes' }[at]; }
   else body = { agenda: agendaView, network: networkView, live: liveView, event: eventView }[S.tab]();
@@ -195,13 +199,14 @@ function render() {
   const tools = S.chatWith ? '' : `<div class="tools">${modeBtn}
       ${adm ? '' : `<button class="tool" data-act="checkin" aria-label="Check-in">${icon('qr_code_scanner')}</button>`}
       <button class="tool" data-act="notes" aria-label="Notificações">${icon('notifications')}${unread ? '<span class="dot"></span>' : ''}</button>
-      <button class="me-btn" data-act="profile" aria-label="Perfil">${icon('person', 'i-s')}</button></div>`;
+      <button class="me-btn ${S.me.photo ? 'has-img' : ''}" data-act="profile" aria-label="Perfil">${S.me.photo ? `<img src="${esc(S.me.photo)}" alt="">` : icon('person', 'i-s')}</button></div>`;
   const tabs = adm ? [['dash', 'Painel', 'dashboard'], ['users', 'Inscritos', 'group'], ['comms', 'Avisos', 'campaign'], ['live', 'Enquetes', 'how_to_vote']] : [['agenda', 'Agenda', 'calendar_month'], ['network', 'Networking', 'groups'], ['live', 'Ao Vivo', 'sensors'], ['event', 'Evento', 'domain']];
   const cur = adm ? (S.adminTab || 'dash') : S.tab;
   setApp(`<div class="shell"><div class="topbar"><div class="brand">${left}<div class="clip"><div class="eyebrow blue">OFG Recife 2026</div><h1>${esc(title)}</h1></div></div>${tools}</div>
     <main>${body}</main>
     ${S.chatWith ? composer() : `<nav class="nav"><div class="nav-inner">${tabs.map(([k, l, ic]) => `<button data-tab="${k}" class="${cur === k && !sub ? 'on' : ''} ${k === 'live' && !adm ? 'live-tab' : ''}"><span class="pill">${icon(ic, cur === k && !sub ? 'fill' : '')}</span>${l}${k === 'network' && !adm && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`}</div>`);
   if (adm && !sub && (S.adminTab || 'dash') === 'dash') drawQRs();
+  if (v?.type === 'badge') mountBadge(S.me);
 }
 
 // ----- Autenticação (boas-vindas, criar conta, entrar, recuperar) -----
@@ -395,7 +400,7 @@ function personRow(u) {
   const label = connected ? 'Conectados' : u.conn === 'pending' ? (u.incoming ? 'Aceitar' : 'Pendente') : 'Trocar Contato';
   const disabled = connected || (u.conn === 'pending' && !u.incoming);
   return `<div class="card pad-s clickable" data-act="person" data-id="${u.id}">
-    <div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="title-m clip">${esc(u.name)}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div></div></div>
+    <div class="row">${av(u)}<div class="grow"><div class="title-m clip">${esc(u.name)}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div></div></div>
     ${(u.interests || []).length ? `<div class="chips">${u.interests.slice(0, 4).map((i) => `<span class="chip static ${shared.includes(i) ? 'on' : ''}">${shared.includes(i) ? '✓ ' : ''}${esc(i)}</span>`).join('')}</div>` : ''}
     <div class="row"><button class="btn tonal small grow" data-act="${connected ? 'chat' : 'person'}" data-id="${u.id}">${icon('chat_bubble', 'i-s')} Mensagem 1:1</button>
       <button class="btn small grow" data-act="connect" data-id="${u.id}" ${disabled ? 'disabled' : ''}>${icon(connected ? 'check_circle' : 'contact_page', 'i-s')} ${label}</button></div></div>`;
@@ -409,6 +414,8 @@ function networkView() {
   const people = S.interest ? S.people.filter((u) => u.interests.includes(S.interest)) : S.people;
   const filters = S.ev.interests.slice(0, 4);
   return `
+    <div class="card pad-s row clickable" data-act="badge"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div>
+      <div class="grow"><div class="eyebrow blue">Crachá do evento</div><div class="title-m">Visualizar o meu crachá</div></div>${icon('chevron_right')}</div>
     <div class="card pad-s row"><div class="avatar" style="background:none;border:2px solid var(--primary);color:var(--primary)">${icon(pc === 100 ? 'check_circle' : 'person')}</div>
       <div class="grow"><div class="eyebrow" style="color:var(--success)">Perfil ${pc}% completo</div><div class="title-m">${pc === 100 ? 'Pronto para fazer networking' : 'Complete para melhores sugestões'}</div></div>
       <button class="btn tonal small" data-act="profile">Editar</button></div>
@@ -417,16 +424,16 @@ function networkView() {
       ${filters.map((f) => `<button class="chip ${S.interest === f && sub === 'all' ? 'on' : ''}" data-act="interest" data-v="${esc(f)}">${esc(f)}</button>`).join('')}
       <button class="chip ${sub === 'conn' ? 'on' : ''}" data-act="nettab" data-id="${sub === 'conn' ? 'all' : 'conn'}">Conexões (${mine.length})</button></div>
     ${sub === 'all' ? `
-      ${pend.map((c) => `<div class="card pad-s row"><div class="avatar">${esc(initials(c.user.name))}</div><div class="grow"><b>${esc(c.user.name)}</b><div class="muted">${esc(c.user.company || '')} quer trocar contacto</div></div>
+      ${pend.map((c) => `<div class="card pad-s row">${av(c.user)}<div class="grow"><b>${esc(c.user.name)}</b><div class="muted">${esc(c.user.company || '')} quer trocar contacto</div></div>
         <button class="btn small" data-act="respond" data-id="${c.id}" data-v="1">Aceitar</button><button class="btn small text" data-act="respond" data-id="${c.id}" data-v="0">Ignorar</button></div>`).join('')}
       ${!S.q && !S.interest && S.sugg.length ? `<div class="sec-title"><h3 class="row" style="gap:8px;color:var(--primary)">${icon('auto_awesome')}Afinidade</h3><span class="eyebrow blue">Baseado nos seus interesses</span></div>
-        <div class="h-scroll">${S.sugg.map((u) => `<div class="card clickable" data-act="person" data-id="${u.id}"><div class="row between"><div class="avatar">${esc(initials(u.name))}</div><span class="pill-tag">${icon('bolt', 'i-s')}${pct(u)}% match</span></div>
+        <div class="h-scroll">${S.sugg.map((u) => `<div class="card clickable" data-act="person" data-id="${u.id}"><div class="row between">${av(u)}<span class="pill-tag">${icon('bolt', 'i-s')}${pct(u)}% match</span></div>
           <div><div class="title-m clip">${esc(u.name)}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div></div>
           <div class="chips">${(u.shared || []).slice(0, 3).map((i) => `<span class="chip static on">${esc(i)}</span>`).join('')}</div>
           <button class="btn small block" data-act="connect" data-id="${u.id}">${icon('person_add', 'i-s')} Trocar Contato</button></div>`).join('')}</div>` : ''}
       <div class="sec-title"><h3>Participantes no Evento</h3><span class="chip static">${people.length}</span></div>
       <div id="peopleList" style="display:flex;flex-direction:column;gap:12px">${people.map(personRow).join('') || '<div class="empty">Ninguém encontrado ainda.</div>'}</div>`
-    : mine.map((c) => `<div class="card pad-s clickable" data-act="chat" data-id="${c.user.id}"><div class="row"><div class="avatar">${esc(initials(c.user.name))}</div>
+    : mine.map((c) => `<div class="card pad-s clickable" data-act="chat" data-id="${c.user.id}"><div class="row">${av(c.user)}
         <div class="grow"><div class="title-m clip">${esc(c.user.name)}</div><div class="muted clip">${esc(c.lastMessage ? c.lastMessage.text : [c.user.role, c.user.company].filter(Boolean).join(' · '))}</div></div>${icon('chat_bubble')}</div></div>`).join('') || '<div class="empty">Ainda sem conexões. Troque contactos na aba Todos.</div>'}`;
 }
 
@@ -435,7 +442,7 @@ function personView(id) {
   const u = conn?.user || S.people.find((p) => p.id === id) || S.sugg.find((p) => p.id === id);
   if (!u) return '<div class="empty">Não encontrado.</div>';
   const accepted = conn?.status === 'accepted';
-  return `<div class="card"><div class="row"><div class="avatar lg">${esc(initials(u.name))}</div><div><h2 class="title-l">${esc(u.name)}</h2><div class="muted">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div></div></div>
+  return `<div class="card"><div class="row">${av(u, 'lg')}<div><h2 class="title-l">${esc(u.name)}</h2><div class="muted">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div></div></div>
     <div class="chips">${(u.interests || []).map((i) => `<span class="chip static ${S.me.interests.includes(i) ? 'on' : ''}">${esc(i)}</span>`).join('')}</div>
     ${accepted ? `<div class="hr"></div><div class="label">Contactos partilhados</div><div>✉ <a href="mailto:${esc(u.email)}">${esc(u.email)}</a></div>${u.linkedin ? `<div>in <a href="${esc(u.linkedin.startsWith('http') ? u.linkedin : 'https://' + u.linkedin)}" target="_blank" rel="noopener">${esc(u.linkedin)}</a></div>` : ''}<button class="btn" data-act="chat" data-id="${u.id}">${icon('send')} Enviar mensagem</button>`
       : `<button class="btn" data-act="connect" data-id="${u.id}" ${conn && !conn.incoming ? 'disabled' : ''}>${icon('contact_page')} ${conn ? (conn.incoming ? 'Aceitar pedido' : 'Pedido enviado') : 'Trocar Contato'}</button><p class="muted">Ao aceitar, vocês trocam email e LinkedIn e podem conversar.</p>`}</div>`;
@@ -482,7 +489,7 @@ async function drawQRs() {
   els.forEach((el) => new window.QRCode(el, { text: `${location.origin}/?checkin=${el.dataset.qr}`, width: 148, height: 148, colorDark: '#000000', colorLight: '#ffffff' }));
 }
 const admErr = () => `<div class="card pad-s" style="border-color:rgba(239,68,68,.4)"><b>Não foi possível carregar o painel</b><div class="err">${esc(S.adm.error)}</div><button class="btn small" data-act="admrefresh">Tentar novamente</button></div>`;
-const kpi = (label, value, sub = '', ic = '') => `<div class="card pad-s" style="gap:2px"><div class="eyebrow row" style="gap:6px">${ic ? icon(ic, 'i-s') : ''}${label}</div><div class="display mono" style="font-size:26px">${value}</div>${sub ? `<div class="muted">${sub}</div>` : ''}</div>`;
+const kpi = (label, value, sub = '', ic = '') => `<div class="card pad-s kpi" style="gap:2px">${ic ? icon(ic, 'kpi-bg') : ''}<div class="eyebrow row" style="gap:6px">${ic ? icon(ic, 'i-s') : ''}${label}</div><div class="display mono" style="font-size:26px">${value}</div>${sub ? `<div class="muted">${sub}</div>` : ''}</div>`;
 const hbar = (label, n, max, extra = '') => `<div><div class="row between"><span class="clip">${esc(label)}</span><b class="mono">${n}${extra}</b></div><div class="bar"><i style="width:${max ? Math.min(100, (n / max) * 100) : 0}%"></i></div></div>`;
 
 function adminDash() {
@@ -493,9 +500,9 @@ function adminDash() {
   return `
     <div class="row between"><span class="eyebrow blue">Visão geral</span><button class="btn small tonal" data-act="admrefresh">Atualizar</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${kpi('Inscritos', st.users, `${st.admins} admin`, 'group')}
+      ${kpi('Inscritos', st.users, `${st.admins} admin`, 'groups')}
       ${kpi('Com check-in', st.checkedIn, `${pct(st.checkedIn, st.users)}% dos inscritos`, 'check_circle')}
-      ${kpi('Conexões', st.connections, `${st.pending} pendentes`, 'contact_page')}
+      ${kpi('Conexões', st.connections, `${st.pending} pendentes`, 'hub')}
       ${kpi('Mensagens', st.messages, '', 'chat_bubble')}
       ${kpi('Perguntas', st.questions, `${st.votes} votos em ${st.pollsCount} enquetes`, 'how_to_vote')}
       ${kpi('Push ativo', st.pushEnabled, `${pct(st.pushEnabled, st.users)}% dos inscritos`, 'notifications_active')}
@@ -525,7 +532,7 @@ function adminUsers() {
 function adminUserRow(u) {
   const days = S.ev.event.days.filter((d) => u.checkins[d.id]).length;
   const self = u.id === S.me.id;
-  return `<div class="card pad-s"><div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div>${u.phone ? `<div class="muted clip">${icon('call', 'i-s')} ${esc(u.phone)}</div>` : ''}</div></div>
+  return `<div class="card pad-s"><div class="row">${av(u)}<div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div>${u.phone ? `<div class="muted clip">${icon('call', 'i-s')} ${esc(u.phone)}</div>` : ''}</div></div>
     <div class="chips"><span class="chip static">Check-in ${days}/${S.ev.event.days.length}</span><span class="chip static">${u.points} pts</span>${u.push ? '<span class="chip static on">Push</span>' : ''}<span class="chip static">${fmtDT(u.createdAt)}</span></div>
     <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button>
     ${u.isAdmin ? '' : `<button class="btn small danger-o" data-act="deluser" data-id="${u.id}">${icon('delete', 'i-s')} Excluir inscrito</button>`}</div>`;
@@ -709,9 +716,42 @@ function checkinView() {
     ${days.map((d) => `<div class="card pad-s row"><div class="grow"><b>${fmtDay(d.date)}</b><div class="muted">${esc(d.title)}</div></div>${S.me.checkins[d.id] ? `<span class="pill-tag green">${icon('check', 'i-s')} Presente</span>` : '<span class="muted">—</span>'}</div>`).join('')}`;
 }
 
+function badgeView() {
+  const me = S.me;
+  return `${badgeHtml(me, S.ev.event)}
+    <div class="row pc-actions"><button class="btn grow" data-act="badgeshare">${icon('share', 'i-s')} Partilhar</button><button class="btn tonal grow" data-act="badgeprint">${icon('download', 'i-s')} Imprimir</button></div>
+    ${me.photo ? '' : `<button class="btn text block" data-act="profile">${icon('photo_camera', 'i-s')} Adicionar foto de perfil ao crachá</button>`}
+    <p class="muted" style="text-align:center">O QR do crachá contém o seu contacto (nome, empresa, cargo, telefone e email) para os outros participantes guardarem.</p>`;
+}
+
+async function sharePhotoFile(file) {
+  setBusy(true);
+  try {
+    const r = await processPhoto(file);
+    const up = await api('/me/photo', { method: 'POST', body: { image: r.dataUrl } });
+    S.me.photo = up.photo; await Promise.all([loadMe(), loadPeople(), loadSugg()]);
+    toast('Foto atualizada', r.cutout ? 'Recorte automático aplicado.' : 'Foto recortada (fundo mantido: o recorte automático não está disponível agora).');
+  } catch (e) { toast('Não foi possível usar a foto', e.message || 'Tente outra imagem.'); }
+  finally { setBusy(false); render(); }
+}
+async function shareBadge() {
+  setBusy(true);
+  try {
+    const blob = await badgeBlob(S.me, S.ev.event); if (!blob) throw new Error('falha');
+    const file = new File([blob], 'cracha-ofg-recife-2026.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'O meu crachá · ' + S.ev.event.name }); }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Crachá guardado', 'Imagem descarregada.'); }
+  } catch (e) { if (e?.name !== 'AbortError') toast('Não foi possível partilhar', 'Tente novamente.'); }
+  finally { setBusy(false); }
+}
+
 function profileView() {
   const dark = getTheme() === 'dark';
-  return `<div class="card pad-s row"><div class="avatar" style="border-radius:12px">${icon(dark ? 'dark_mode' : 'light_mode')}</div><div class="grow"><div class="title-m">Modo escuro</div><div class="muted" id="themeLabel">${dark ? 'Ativo' : 'Desativado (modo claro)'}</div></div>
+  const me = S.me;
+  return `<div class="card photo-card"><div class="row" style="gap:16px">${av(me, 'xl')}<div class="grow"><div class="title-m">Foto de perfil</div><div class="muted">A foto é recortada automaticamente e usada no seu crachá e no networking.</div></div></div>
+      <div class="row"><button type="button" class="btn small grow" data-act="photo">${icon('photo_camera', 'i-s')} ${me.photo ? 'Trocar foto' : 'Adicionar foto'}</button>${me.photo ? `<button type="button" class="btn tonal small" data-act="photodel" aria-label="Remover foto">${icon('delete', 'i-s')}</button>` : ''}</div>
+      <input type="file" id="photoInput" accept="image/*" hidden></div>
+    <div class="card pad-s row"><div class="avatar" style="border-radius:12px">${icon(dark ? 'dark_mode' : 'light_mode')}</div><div class="grow"><div class="title-m">Modo escuro</div><div class="muted" id="themeLabel">${dark ? 'Ativo' : 'Desativado (modo claro)'}</div></div>
     <label class="switch"><input type="checkbox" id="themeSwitch" role="switch" aria-label="Alternar modo escuro" ${dark ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>
     <form id="profForm" class="card" style="gap:16px">
       ${['name:Nome', 'company:Empresa', 'role:Cargo', 'phone:Telefone', 'linkedin:LinkedIn'].map((x) => { const [k, l] = x.split(':'); return `<div class="field"><label>${l}</label><input name="${k}" value="${esc(S.me[k])}"></div>`; }).join('')}
@@ -719,7 +759,8 @@ function profileView() {
       <button class="btn">Guardar</button>
       ${'Notification' in window && Notification.permission !== 'granted' ? '<button type="button" class="btn tonal" data-act="notif">Ativar notificações</button>' : ''}
       <button type="button" class="btn text" data-act="logout">Sair</button></form>
-    <p class="muted" style="text-align:center"><a href="/termos" target="_blank" rel="noopener">Termos de Serviço</a> · <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a></p>`;
+    <p class="muted" style="text-align:center"><a href="/termos" target="_blank" rel="noopener">Termos de Serviço</a> · <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a></p>
+    <p class="muted" style="text-align:center;font-size:12px">Ícones: <a href="https://www.flaticon.com/uicons" target="_blank" rel="noopener">Flaticon UIcons</a></p>`;
 }
 
 async function startSession(token, remember) {
@@ -747,6 +788,11 @@ document.addEventListener('click', async (e) => {
     else if (act === 'pick') { S.pickInterests = S.pickInterests.includes(v) ? S.pickInterests.filter((x) => x !== v) : [...S.pickInterests, v]; }
     else if (act === 'back') { S.view = null; S.chatWith = null; await loadConns(); }
     else if (act === 'notes') { S.view = { type: 'notes' }; const shown = S.notes.map((n) => ({ ...n })); await api('/notifications', { method: 'POST' }); S.notes = shown; render(); S.notes.forEach((n) => (n.read = true)); toTop(); return; }
+    else if (act === 'badge') { S.view = { type: 'badge' }; S.chatWith = null; toTop(); }
+    else if (act === 'badgeshare') { await shareBadge(); return; }
+    else if (act === 'badgeprint') { window.print(); return; }
+    else if (act === 'photo') { document.getElementById('photoInput')?.click(); return; }
+    else if (act === 'photodel') { await api('/me/photo', { method: 'DELETE' }); await Promise.all([loadMe(), loadPeople(), loadSugg()]); toast('Foto removida'); }
     else if (act === 'profile') { S.view = { type: 'profile' }; S.chatWith = null; toTop(); }
     else if (act === 'checkin') { S.view = { type: 'checkin' }; S.err = ''; toTop(); }
     else if (act === 'scan') { openScanner(); return; }
@@ -860,10 +906,11 @@ document.addEventListener('input', (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'photoInput' && e.target.files?.[0]) { const f = e.target.files[0]; e.target.value = ''; sharePhotoFile(f); return; }
   if (e.target.id !== 'themeSwitch') return;
   const dark = e.target.checked; applyTheme(dark ? 'dark' : 'light');
   const l = document.getElementById('themeLabel'); if (l) l.textContent = dark ? 'Ativo' : 'Desativado (modo claro)';
-  const ic = e.target.closest('.card')?.querySelector('.avatar .material-symbols-outlined'); if (ic) ic.textContent = dark ? 'dark_mode' : 'light_mode';
+  const ic = e.target.closest('.card')?.querySelector('.avatar .fi'); if (ic) ic.className = 'fi fi-rr-' + ICONS[dark ? 'dark_mode' : 'light_mode'];
 });
 
 document.addEventListener('input', (e) => {
