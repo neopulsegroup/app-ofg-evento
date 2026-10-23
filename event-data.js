@@ -3,17 +3,17 @@ export const EVENT = {
   name: 'OFG Recife 2026',
   tagline: 'Rotas e oportunidades',
   venue: {
-    name: 'Escritório Brasil · Boa Viagem Corporate',
-    address: 'R. Prof. Aloísio Pessoa de Araújo, 75 - Boa Viagem, Recife - PE, 51021-410',
-    room: 'Boa Viagem Corporate · 1011 · Sala 45',
-    mapsQuery: 'R. Prof. Aloísio Pessoa de Araújo, 75 - Boa Viagem, Recife - PE',
+    name: 'Hub Plural Espinheiro',
+    address: 'Av. Gov. Agamenon Magalhães, 2939 - Espinheiro, Recife - PE',
+    room: 'Espinheiro · Recife/PE',
+    mapsQuery: 'Hub Plural Espinheiro, Av. Gov. Agamenon Magalhães, 2939 - Espinheiro, Recife - PE',
   },
   days: [
     { id: 'd1', date: '2026-11-03', title: 'Saúde Mental', subtitle: 'Apresentação + almoço' },
     { id: 'd2', date: '2026-11-04', title: '33 Anos OFG', subtitle: 'Apresentação + jantar' },
     { id: 'd3', date: '2026-11-05', title: 'Internacionalização', subtitle: 'com a Porto Digital · business drink às 16h' },
   ],
-  rooms: ['Auditório', 'Sala 45', 'Área de convívio'],
+  rooms: ['Auditório', 'Área de convívio'],
   theme: { title: 'Oporto Forte Group · 33 Anos', subtitle: 'Conectando lideranças executivas, capital estratégico e governança transatlântica.', central: 'Rotas & Oportunidades · 2027: missões empresariais' },
 };
 
@@ -42,7 +42,7 @@ export const SPONSORS = [
 ];
 
 export const FAQS = [
-  { q: 'Onde é o evento?', a: 'No Escritório Brasil da OFG, Boa Viagem Corporate, sala 45 (1011): R. Prof. Aloísio Pessoa de Araújo, 75, Boa Viagem, Recife.' },
+  { q: 'Onde é o evento?', a: 'No Hub Plural Espinheiro: Av. Gov. Agamenon Magalhães, 2939, Espinheiro, Recife - PE.' },
   { q: 'Como faço check-in?', a: 'Na receção, leia o QR code do dia com a câmara do telemóvel (abre a app e faz o check-in) ou introduza o código na aba Mais > Check-in.' },
   { q: 'Como funciona o networking?', a: 'Crie o seu perfil, procure participantes ou veja as sugestões, envie um pedido de conexão. Quando aceite, podem trocar mensagens e contactos.' },
   { q: 'O que é o Passe de Ouro?', a: 'Contribuição que se converte em tênis para crianças do projeto Um Saque para a Vida.' },

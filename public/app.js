@@ -207,7 +207,7 @@ function render() {
 const field = (name, label, ph, o = {}) => `<div class="field"><div class="row between"><label>${label}${o.req ? ' <span style="color:var(--primary)">*</span>' : ''}</label>${o.hint ? `<span class="eyebrow" style="font-weight:500">${o.hint}</span>` : ''}</div>
   <div class="inp">${icon(o.icon || 'badge')}<input name="${name}" type="${o.type || 'text'}" placeholder="${esc(ph)}" ${o.req ? 'required' : ''} ${o.ac ? `autocomplete="${o.ac}"` : ''} ${o.min ? `minlength="${o.min}"` : ''} value="${esc(o.value || S.draft[name] || '')}">${o.pw ? `<button type="button" class="eye" data-act="togglepw" aria-label="Mostrar senha">${icon('visibility')}</button>` : ''}</div></div>`;
 const authTop = (title) => `<div class="authbar"><button class="tool" data-act="authmode" data-v="welcome" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button><span class="ofgtag">OFG</span><b class="grow clip">${title}</b></div>`;
-const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Boa Viagem Corporate · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
+const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Hub Plural Espinheiro · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
 const googleBlock = (sepAfter) => S.ev.googleClientId ? `<div class="gwrap">${sepAfter ? '<div class="or"><span>ou</span></div>' : ''}<div id="gbtn" class="gbtn" aria-label="Continuar com Google"></div>${sepAfter ? '' : '<div class="or"><span>ou preencha o formulário</span></div>'}</div>` : '';
 const legalLine = () => `<p class="muted" style="text-align:center">Ao continuar, aceita os <a href="/termos" target="_blank" rel="noopener">Termos de Serviço</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>`;
 const supportCard = (txt) => `<div class="card pad-s row" style="gap:12px">${icon('support_agent')}<p class="muted" style="text-align:center;flex:1">${txt}</p></div>`;
@@ -263,11 +263,11 @@ function authView() {
       <div class="row" style="gap:10px;margin-top:4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--primary)"></span><span class="eyebrow blue" style="color:var(--primary)">${esc(e.tagline.replace(' e ', ' & '))}</span></div>
       <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
       <h2 class="h-md" style="color:var(--primary);font-weight:500">33 Anos Oporto Forte Group</h2>
-      <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Boa Viagem Corporate.</p>
+      <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Hub Plural Espinheiro.</p>
       <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="min-height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
     <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
       <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
-      <p class="muted">Já está no Boa Viagem Corporate? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
+      <p class="muted">Já está no Hub Plural Espinheiro? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
     <button class="btn block" data-act="authmode" data-v="register">${icon('assignment_ind')} Criar meu perfil no evento</button>
     <button class="btn tonal block" data-act="authmode" data-v="login">${icon('login')} Já tenho conta / Entrar</button>
     ${legalLine()}
@@ -299,7 +299,7 @@ function authView() {
     <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
       <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Rotas &amp; Oportunidades</span>
       <h1 class="display">Acessar Credencial</h1><p class="muted" style="font-size:15px">Entre com seu e-mail corporativo cadastrado para acessar a programação, reuniões e networking.</p></div>
-    <div class="hero-img" style="height:150px;border-radius:20px"><b style="position:absolute;left:16px;bottom:14px" class="row">${icon('location_on')} Boa Viagem Corporate Hall · Recife/PE</b></div>
+    <div class="hero-img" style="height:150px;border-radius:20px"><b style="position:absolute;left:16px;bottom:14px" class="row">${icon('location_on')} Hub Plural Espinheiro · Recife/PE</b></div>
     <form id="authForm" class="field" style="gap:16px">
       ${field('email', 'E-mail corporativo', 'ex: nome@empresa.com', { req: 1, hint: 'Acesso homologado', icon: 'mail', type: 'email', ac: 'email' })}
       ${field('password', 'Senha de acesso', 'Sua senha de acesso', { req: 1, icon: 'lock', type: 'password', pw: 1, ac: 'current-password' })}
@@ -309,7 +309,7 @@ function authView() {
     ${googleBlock(true)}
     <p style="text-align:center" class="muted">Ainda não tem cadastro? <button class="btn text small" data-act="authmode" data-v="register" style="padding:0 4px;height:auto">Crie o seu perfil</button></p>
     ${legalLine()}
-    ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (Sala 45).')}`;
+    ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (receção do evento).')}`;
   else if (mode === 'recover') inner = `${authTop('Identity Verification')}
     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('lock')}</div>
       <span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>OFG Recife 2026 · Acesso seguro</span>
@@ -321,7 +321,7 @@ function authView() {
         ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}<button class="btn block">Redefinir e entrar ${icon('arrow_forward', 'i-s')}</button></form>`
     : `<form id="recoverForm" class="card" style="gap:16px">${field('email', 'E-mail corporativo cadastrado', 'seu.email@empresa.com', { req: 1, hint: 'Corporativo', icon: 'alternate_email', type: 'email', ac: 'email', value: S.recoverEmail })}
         ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}<button class="btn block">${icon('send', 'i-s')} Enviar Instruções de Recuperação</button></form>`}
-    <div class="card pad-s row top" style="background:var(--input)"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('assignment_ind')}</div><div><div class="eyebrow blue" style="color:var(--primary)">Assistência presencial</div><p class="muted"><b style="color:var(--text)">Participantes no local:</b> caso esteja no Boa Viagem Corporate, a equipa de credenciamento na <b style="color:var(--text)">Sala 45</b> pode ajudá-lo presencialmente.</p></div></div>
+    <div class="card pad-s row top" style="background:var(--input)"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('assignment_ind')}</div><div><div class="eyebrow blue" style="color:var(--primary)">Assistência presencial</div><p class="muted"><b style="color:var(--text)">Participantes no local:</b> caso esteja no Hub Plural Espinheiro, a equipa de credenciamento na <b style="color:var(--text)">receção do evento</b> pode ajudá-lo presencialmente.</p></div></div>
     <button class="btn text block" data-act="authmode" data-v="login">${icon('arrow_back', 'i-s')} Lembrou sua senha? Voltar para o login</button>
     <div class="eyebrow" style="text-align:center">Central OFG</div>
     <p class="muted" style="text-align:center">Não recebeu o e-mail? ${S.recoverSent ? '<button class="btn text small" data-act="resend" style="padding:0 4px;height:auto;text-decoration:underline">Reenviar código</button>' : 'Verifique o spam ou tente novamente.'}</p>`;
