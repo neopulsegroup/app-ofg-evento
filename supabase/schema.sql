@@ -70,3 +70,6 @@ revoke all on function add_points(text, int) from public, anon, authenticated;
 alter table users add column if not exists is_admin boolean not null default false;
 alter table users add column if not exists phone text not null default '';
 alter table announcements add column if not exists audience text not null default 'all', add column if not exists recipient_ids text[] not null default '{}';
+
+-- foto de perfil (URL pública no bucket 'avatars' do Storage)
+alter table users add column if not exists photo text not null default '';
