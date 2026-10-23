@@ -260,12 +260,12 @@ function authView() {
   if (mode === 'welcome') inner = `
     <div class="card" style="padding:16px">
       <div class="hero-img"><video src="/media/intro.mp4" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video><img class="hero-logo" src="/media/logo-ofg.png" alt="Oporto Forte Group"><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:#F1F5F9"><span class="d" style="background:var(--live)"></span>Edição especial</span>
-        <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 · 4 · 5 novembro 2026 · Recife</span></div>
+        <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 de novembro de 2026 · Recife</span></div>
       <div class="row" style="gap:10px;margin-top:4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--primary)"></span><span class="eyebrow blue" style="color:var(--primary)">${esc(e.tagline.replace(' e ', ' & '))}</span></div>
       <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
-      <h2 class="h-md" style="color:var(--primary);font-weight:500">33 Anos Oporto Forte Group</h2>
-      <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Hub Plural Espinheiro.</p>
-      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="min-height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
+      <h2 class="h-md" style="color:var(--primary);font-weight:500">Grande Encontro de Gestores e Líderes de RH</h2>
+      <p style="color:var(--text2);font-size:16px;line-height:26px">Saúde Mental nas Empresas: o que 2026 ensinou e como se preparar para 2027. Entrada solidária com doação de tênis para o Instituto do Tênis, no Hub Plural Espinheiro.</p>
+      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação'], ['volunteer_activism', 'Entrada solidária']].map(([i, t]) => `<span class="chip static" style="min-height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
     <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
       <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
       <p class="muted">Já está no Hub Plural Espinheiro? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
@@ -274,12 +274,12 @@ function authView() {
     ${legalLine()}
     ${venueLine()}
     <p class="muted" style="text-align:center">Precisa de suporte com a sua inscrição? Fale com a organização.</p>
-    <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('public', 'i-s')} Porto Digital</b></div>
-    <div class="eyebrow" style="text-align:center">Hub de conexões atlânticas · 1993 - 2026</div>`;
+    <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('volunteer_activism', 'i-s')} Instituto do Tênis</b></div>
+    <div class="eyebrow" style="text-align:center">Oporto Forte Group · Recife 2026</div>`;
   else if (mode === 'register') inner = `${authTop('Executive Registration')}
-    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:var(--hero-sub)">3 · 4 · 5 novembro 2026 · Recife</span><span class="pill-tag" style="background:var(--hero-tint);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
+    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:var(--hero-sub)">3 de novembro de 2026 · Recife</span><span class="pill-tag" style="background:var(--hero-tint);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
       <h1 class="display" style="font-size:30px;color:var(--ink)">OFG Recife 2026</h1><p style="color:var(--hero-sub)">${esc(e.tagline)}</p></div>
-    <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Apenas 250 executivos convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
+    <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Encontro para líderes e gestores convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
     ${googleBlock(false)}
     <form id="authForm" class="card" style="gap:18px">
       ${field('name', 'Nome', 'Seu nome completo', { req: 1, hint: 'Como deseja ser chamado', icon: 'badge', ac: 'name' })}
@@ -298,7 +298,7 @@ function authView() {
     ${legalLine()}`;
   else if (mode === 'login') inner = `
     <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
-      <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Rotas &amp; Oportunidades</span>
+      <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Saúde mental nas empresas</span>
       <h1 class="display">Acessar Credencial</h1><p class="muted" style="font-size:15px">Entre com seu e-mail corporativo cadastrado para acessar a programação, reuniões e networking.</p></div>
     <div class="hero-img has-photo" style="height:170px;border-radius:20px"><img class="hero-photo" src="/media/hub-plural.jpg" alt="Hub Plural Espinheiro" loading="eager"><b class="photo-cap row">${icon('location_on')} Hub Plural Espinheiro · Recife/PE</b></div>
     <form id="authForm" class="field" style="gap:16px">
@@ -357,9 +357,9 @@ function agendaView() {
       <h3 class="title-m">${esc(next.title)}</h3><p class="muted clip">${esc(next.desc)}</p></div>
       <div class="inner" style="text-align:center;padding:8px 12px"><div class="eyebrow">${live ? 'Termina' : 'Inicia em'}</div><div class="mono" style="font-weight:700;font-size:18px">${live ? next.end : countdown(sessionTs(next) - t)}</div></div></div></div>` : ''}
     ${ann ? `<div class="banner ${ann.kind === 'alert' ? 'alert' : ''}"><b>${esc(ann.title)}</b><div>${esc(ann.body)}</div><div class="muted">${timeAgo(ann.at)}</div></div>` : ''}
-    <div class="sec-title"><span class="label">Cronograma trienal</span><span class="muted row" style="gap:4px">${icon('schedule', 'i-s')}Fuso Recife (GMT-3)</span></div>
-    <div class="chips scroll-x" style="gap:12px">${days.map((d) => `<button class="day ${S.day === d.id ? 'on' : ''}" data-act="day" data-id="${d.id}"><span class="eyebrow"><span>${new Date(d.date + 'T12:00:00').getDate().toString().padStart(2, '0')} NOV</span>${d.id === todayId ? '<span>●</span>' : ''}</span><span class="t">${esc(d.title)}</span><span class="s">${esc(d.subtitle)}</span></button>`).join('')}</div>
-    <div class="chips scroll-x"><button class="chip solid ${!S.room && !S.favOnly ? 'on' : ''}" data-act="room" data-v="">Todas as Salas</button>${S.ev.event.rooms.map((r) => `<button class="chip ${S.room === r ? 'on' : ''}" data-act="room" data-v="${esc(r)}">${esc(r)}</button>`).join('')}<button class="chip ${S.favOnly ? 'on' : ''}" data-act="favonly">★ Minhas</button></div>
+    <div class="sec-title"><span class="label">Programação · ${fmtDay(days[0].date)}</span><span class="muted row" style="gap:4px">${icon('schedule', 'i-s')}Fuso Recife (GMT-3)</span></div>
+    ${days.length > 1 ? `<div class="chips scroll-x" style="gap:12px">${days.map((d) => `<button class="day ${S.day === d.id ? 'on' : ''}" data-act="day" data-id="${d.id}"><span class="eyebrow"><span>${new Date(d.date + 'T12:00:00').getDate().toString().padStart(2, '0')} NOV</span>${d.id === todayId ? '<span>●</span>' : ''}</span><span class="t">${esc(d.title)}</span><span class="s">${esc(d.subtitle)}</span></button>`).join('')}</div>` : ''}
+    ${S.ev.event.rooms.length > 1 ? `<div class="chips scroll-x"><button class="chip solid ${!S.room && !S.favOnly ? 'on' : ''}" data-act="room" data-v="">Todas as Salas</button>${S.ev.event.rooms.map((r) => `<button class="chip ${S.room === r ? 'on' : ''}" data-act="room" data-v="${esc(r)}">${esc(r)}</button>`).join('')}<button class="chip ${S.favOnly ? 'on' : ''}" data-act="favonly">★ Minhas</button></div>` : `<div class="chips"><button class="chip ${S.favOnly ? 'on' : ''}" data-act="favonly">★ Minhas</button></div>`}
     ${list.map(sessionCard).join('') || '<div class="empty">Nada por aqui.</div>'}`;
 }
 
@@ -369,6 +369,7 @@ function sessionView(id) {
   return `<div class="card"><div class="row" style="gap:6px;flex-wrap:wrap">${isLive(s) ? '<span class="pill-tag live"><span class="d"></span>Ao vivo</span>' : ''}<span class="pill-tag ${TAGCLS[s.tag] || ''}">${esc(s.tag)}</span></div>
     <div class="label">${fmtDay(S.ev.event.days.find((d) => d.id === s.day).date)} · ${s.start}–${s.end} · ${esc(s.room)}</div>
     <h2 class="title-l">${esc(s.title)}</h2>${s.speaker ? `<div class="muted">${esc(s.speaker)}</div>` : ''}<p>${esc(s.desc)}</p>
+    ${(s.people || []).map((p) => `<div class="inner row"><div class="avatar sm">${esc(initials(p.name))}</div><div class="grow"><b>${esc(p.name)}</b><div class="muted">${esc(p.role)}</div></div></div>`).join('')}
     <button class="btn ${fav ? 'tonal' : ''}" data-act="fav" data-id="${id}">${icon(fav ? 'notifications_active' : 'notifications', fav ? 'fill' : '')} ${fav ? 'Notificação ativa' : 'Notificar-me 10 min antes'}</button></div>
     ${polls.map(pollCard).join('')}
     <div class="sec-title"><h3>Perguntas ao vivo</h3></div>
@@ -678,9 +679,11 @@ function liveView() {
 function eventView() {
   const e = S.ev.event, v = e.venue;
   return `
-    <div class="card hero"><span class="pill-tag" style="background:var(--ink);color:var(--primary);align-self:flex-start">Edição especial · 33 anos</span>
+    <div class="card hero"><span class="pill-tag" style="background:var(--ink);color:var(--primary);align-self:flex-start">Entrada solidária</span>
       <h2 class="display" style="font-size:26px;line-height:32px">${esc(e.theme.title)}</h2><p class="muted" style="color:var(--hero-sub)">${esc(e.theme.subtitle)}</p>
       <div class="inner" style="background:var(--hero-tint);border:0"><div class="eyebrow">Tema central</div><b>${esc(e.theme.central)}</b></div></div>
+    <div class="card"><h3 class="h-md">Temas do painel</h3>${(e.topics || []).map((t) => `<div class="row top">${icon('check_circle', 'i-s')}<span class="grow">${esc(t)}</span></div>`).join('')}</div>
+    ${(S.ev.speakers || []).length ? `<div class="sec-title"><h3>Sobre os palestrantes</h3></div>${S.ev.speakers.map((p) => `<div class="card"><div class="row top"><div class="avatar">${esc(initials(p.name))}</div><div class="grow"><b>${esc(p.name)}</b><div class="muted">${esc(p.role)}</div></div></div><p class="muted">${esc(p.bio)}</p></div>`).join('')}` : ''}
     <div class="card"><div class="row between"><h3 class="h-md row" style="gap:8px">${icon('domain')}Local do Evento</h3></div>
       <div><b>${esc(v.name)}</b><div class="muted">${esc(v.address)}</div><div class="muted">${esc(v.room)}</div></div>
       <iframe class="map" title="Mapa" loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(v.mapsQuery)}&output=embed"></iframe>
@@ -689,7 +692,7 @@ function eventView() {
       ${S.ev.announcements.map((a) => `<div class="inner" ${a.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(a.title)}</b><span class="muted">${timeAgo(a.at)}</span></div><div class="muted">${esc(a.body)}</div></div>`).join('') || '<div class="muted">Sem avisos por agora.</div>'}</div>
     <div class="sec-title"><h3>Informações &amp; Logística</h3></div>
     ${S.ev.faqs.map((f) => `<details class="card pad-s"><summary>${esc(f.q)}${icon('expand_more')}</summary><p>${esc(f.a)}</p></details>`).join('')}
-    <div class="card" style="text-align:center"><div class="eyebrow">Alianças estratégicas</div><h3 class="h-md">Correalização &amp; Apoio Institucional</h3>
+    <div class="card" style="text-align:center"><div class="eyebrow">Organização e causa</div><h3 class="h-md">Apoio Institucional</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${S.ev.sponsors.map((s) => `<div class="inner">${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener" style="text-decoration:none"><b>${esc(s.name)}</b></a>` : `<b>${esc(s.name)}</b>`}<div class="muted">${esc(s.tier)}</div></div>`).join('')}</div></div>`;
 }
 
