@@ -4,7 +4,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const icon = (n, cls = '') => `<span class="material-symbols-outlined ${cls}">${n}</span>`;
 
 // ---------- tema (escuro/claro) ----------
-const getTheme = () => { try { return localStorage.getItem('ofg_theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
+// o modo claro é o padrão; só fica escuro se a pessoa o escolher (guardado como 'dark')
+const getTheme = () => { try { return localStorage.getItem('ofg_theme') === 'dark' ? 'dark' : 'light'; } catch { return 'light'; } };
 function applyTheme(t) {
   if (t === 'light') document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme;
   try { localStorage.setItem('ofg_theme', t); } catch { /* sem armazenamento: vale só nesta sessão */ }
@@ -207,7 +208,7 @@ function render() {
 const field = (name, label, ph, o = {}) => `<div class="field"><div class="row between"><label>${label}${o.req ? ' <span style="color:var(--primary)">*</span>' : ''}</label>${o.hint ? `<span class="eyebrow" style="font-weight:500">${o.hint}</span>` : ''}</div>
   <div class="inp">${icon(o.icon || 'badge')}<input name="${name}" type="${o.type || 'text'}" placeholder="${esc(ph)}" ${o.req ? 'required' : ''} ${o.ac ? `autocomplete="${o.ac}"` : ''} ${o.min ? `minlength="${o.min}"` : ''} value="${esc(o.value || S.draft[name] || '')}">${o.pw ? `<button type="button" class="eye" data-act="togglepw" aria-label="Mostrar senha">${icon('visibility')}</button>` : ''}</div></div>`;
 const authTop = (title) => `<div class="authbar"><button class="tool" data-act="authmode" data-v="welcome" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button><span class="ofgtag">OFG</span><b class="grow clip">${title}</b></div>`;
-const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Boa Viagem Corporate · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
+const venueLine = () => { const v = S.ev.event.venue; return `<a class="card pad-s row" style="text-decoration:none;color:inherit" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.mapsQuery)}" target="_blank" rel="noopener"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('location_on')}</div><div class="grow"><b class="clip" style="display:block">Hub Plural Espinheiro · Recife</b><div class="muted clip">${esc(v.room)}</div></div>${icon('chevron_right')}</a>`; };
 const googleBlock = (sepAfter) => S.ev.googleClientId ? `<div class="gwrap">${sepAfter ? '<div class="or"><span>ou</span></div>' : ''}<div id="gbtn" class="gbtn" aria-label="Continuar com Google"></div>${sepAfter ? '' : '<div class="or"><span>ou preencha o formulário</span></div>'}</div>` : '';
 const legalLine = () => `<p class="muted" style="text-align:center">Ao continuar, aceita os <a href="/termos" target="_blank" rel="noopener">Termos de Serviço</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>`;
 const supportCard = (txt) => `<div class="card pad-s row" style="gap:12px">${icon('support_agent')}<p class="muted" style="text-align:center;flex:1">${txt}</p></div>`;
@@ -259,26 +260,26 @@ function authView() {
   if (mode === 'welcome') inner = `
     <div class="card" style="padding:16px">
       <div class="hero-img"><video src="/media/intro.mp4" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video><img class="hero-logo" src="/media/logo-ofg.png" alt="Oporto Forte Group"><span class="pill-tag" style="position:absolute;top:12px;right:12px;background:rgba(17,20,24,.75);color:#F1F5F9"><span class="d" style="background:var(--live)"></span>Edição especial</span>
-        <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 · 4 · 5 novembro 2026 · Recife</span></div>
+        <span class="pill-tag" style="position:absolute;left:12px;bottom:12px;background:var(--primary);color:var(--on-primary)">${icon('event', 'i-s')} 3 de novembro de 2026 · Recife</span></div>
       <div class="row" style="gap:10px;margin-top:4px"><span style="width:36px;height:4px;border-radius:2px;background:var(--primary)"></span><span class="eyebrow blue" style="color:var(--primary)">${esc(e.tagline.replace(' e ', ' & '))}</span></div>
       <h1 class="display" style="font-size:36px;line-height:42px;letter-spacing:-.03em">OFG Recife <span style="color:var(--primary)">2026</span></h1>
-      <h2 class="h-md" style="color:var(--primary);font-weight:500">33 Anos Oporto Forte Group</h2>
-      <p style="color:var(--text2);font-size:16px;line-height:26px">O ponto de encontro exclusivo para lideranças corporativas, governança e internacionalização no Boa Viagem Corporate.</p>
-      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação']].map(([i, t]) => `<span class="chip static" style="min-height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
+      <h2 class="h-md" style="color:var(--primary);font-weight:500">Grande Encontro de Gestores e Líderes de RH</h2>
+      <p style="color:var(--text2);font-size:16px;line-height:26px">Saúde Mental nas Empresas: o que 2026 ensinou e como se preparar para 2027. Entrada solidária com doação de tênis para o Instituto do Tênis, no Hub Plural Espinheiro.</p>
+      <div class="chips" style="flex-direction:column;align-items:flex-start">${[['groups', 'Encontro para Líderes e Gestores'], ['public', 'Portugal & Brasil'], ['lightbulb', 'Saúde Mental & Inovação'], ['volunteer_activism', 'Entrada solidária']].map(([i, t]) => `<span class="chip static" style="min-height:38px;font-size:14px;color:var(--text)">${icon(i, 'i-s')} ${t}</span>`).join('')}</div></div>
     <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
       <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
-      <p class="muted">Já está no Boa Viagem Corporate? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
+      <p class="muted">Já está no Hub Plural Espinheiro? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
     <button class="btn block" data-act="authmode" data-v="register">${icon('assignment_ind')} Criar meu perfil no evento</button>
     <button class="btn tonal block" data-act="authmode" data-v="login">${icon('login')} Já tenho conta / Entrar</button>
     ${legalLine()}
     ${venueLine()}
     <p class="muted" style="text-align:center">Precisa de suporte com a sua inscrição? Fale com a organização.</p>
-    <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('public', 'i-s')} Porto Digital</b></div>
-    <div class="eyebrow" style="text-align:center">Hub de conexões atlânticas · 1993 - 2026</div>`;
+    <div class="row" style="justify-content:center;gap:16px;flex-wrap:wrap"><b class="muted row" style="gap:6px">${icon('domain', 'i-s')} Oporto Forte Group</b><b class="muted row" style="gap:6px">${icon('volunteer_activism', 'i-s')} Instituto do Tênis</b></div>
+    <div class="eyebrow" style="text-align:center">Oporto Forte Group · Recife 2026</div>`;
   else if (mode === 'register') inner = `${authTop('Executive Registration')}
-    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:var(--hero-sub)">3 · 4 · 5 novembro 2026 · Recife</span><span class="pill-tag" style="background:var(--hero-tint);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
+    <div class="card hero" style="position:relative;overflow:hidden"><div class="row between"><span class="eyebrow" style="color:var(--hero-sub)">3 de novembro de 2026 · Recife</span><span class="pill-tag" style="background:var(--hero-tint);color:var(--ink)"><span class="d" style="color:var(--success)"></span>Exclusivo</span></div>
       <h1 class="display" style="font-size:30px;color:var(--ink)">OFG Recife 2026</h1><p style="color:var(--hero-sub)">${esc(e.tagline)}</p></div>
-    <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Apenas 250 executivos convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
+    <div><h2 class="title-l">Crie o seu perfil</h2><p class="muted">Encontro para líderes e gestores convidados. Os seus dados permitirão o networking inteligente e o agendamento de reuniões.</p></div>
     ${googleBlock(false)}
     <form id="authForm" class="card" style="gap:18px">
       ${field('name', 'Nome', 'Seu nome completo', { req: 1, hint: 'Como deseja ser chamado', icon: 'badge', ac: 'name' })}
@@ -297,9 +298,9 @@ function authView() {
     ${legalLine()}`;
   else if (mode === 'login') inner = `
     <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
-      <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Rotas &amp; Oportunidades</span>
+      <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Saúde mental nas empresas</span>
       <h1 class="display">Acessar Credencial</h1><p class="muted" style="font-size:15px">Entre com seu e-mail corporativo cadastrado para acessar a programação, reuniões e networking.</p></div>
-    <div class="hero-img" style="height:150px;border-radius:20px"><b style="position:absolute;left:16px;bottom:14px" class="row">${icon('location_on')} Boa Viagem Corporate Hall · Recife/PE</b></div>
+    <div class="hero-img has-photo" style="height:170px;border-radius:20px"><img class="hero-photo" src="/media/hub-plural.jpg" alt="Hub Plural Espinheiro" loading="eager"><b class="photo-cap row">${icon('location_on')} Hub Plural Espinheiro · Recife/PE</b></div>
     <form id="authForm" class="field" style="gap:16px">
       ${field('email', 'E-mail corporativo', 'ex: nome@empresa.com', { req: 1, hint: 'Acesso homologado', icon: 'mail', type: 'email', ac: 'email' })}
       ${field('password', 'Senha de acesso', 'Sua senha de acesso', { req: 1, icon: 'lock', type: 'password', pw: 1, ac: 'current-password' })}
@@ -309,7 +310,7 @@ function authView() {
     ${googleBlock(true)}
     <p style="text-align:center" class="muted">Ainda não tem cadastro? <button class="btn text small" data-act="authmode" data-v="register" style="padding:0 4px;height:auto">Crie o seu perfil</button></p>
     ${legalLine()}
-    ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (Sala 45).')}`;
+    ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (receção do evento).')}`;
   else if (mode === 'recover') inner = `${authTop('Identity Verification')}
     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('lock')}</div>
       <span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>OFG Recife 2026 · Acesso seguro</span>
@@ -321,7 +322,7 @@ function authView() {
         ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}<button class="btn block">Redefinir e entrar ${icon('arrow_forward', 'i-s')}</button></form>`
     : `<form id="recoverForm" class="card" style="gap:16px">${field('email', 'E-mail corporativo cadastrado', 'seu.email@empresa.com', { req: 1, hint: 'Corporativo', icon: 'alternate_email', type: 'email', ac: 'email', value: S.recoverEmail })}
         ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}<button class="btn block">${icon('send', 'i-s')} Enviar Instruções de Recuperação</button></form>`}
-    <div class="card pad-s row top" style="background:var(--input)"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('assignment_ind')}</div><div><div class="eyebrow blue" style="color:var(--primary)">Assistência presencial</div><p class="muted"><b style="color:var(--text)">Participantes no local:</b> caso esteja no Boa Viagem Corporate, a equipa de credenciamento na <b style="color:var(--text)">Sala 45</b> pode ajudá-lo presencialmente.</p></div></div>
+    <div class="card pad-s row top" style="background:var(--input)"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('assignment_ind')}</div><div><div class="eyebrow blue" style="color:var(--primary)">Assistência presencial</div><p class="muted"><b style="color:var(--text)">Participantes no local:</b> caso esteja no Hub Plural Espinheiro, a equipa de credenciamento na <b style="color:var(--text)">receção do evento</b> pode ajudá-lo presencialmente.</p></div></div>
     <button class="btn text block" data-act="authmode" data-v="login">${icon('arrow_back', 'i-s')} Lembrou sua senha? Voltar para o login</button>
     <div class="eyebrow" style="text-align:center">Central OFG</div>
     <p class="muted" style="text-align:center">Não recebeu o e-mail? ${S.recoverSent ? '<button class="btn text small" data-act="resend" style="padding:0 4px;height:auto;text-decoration:underline">Reenviar código</button>' : 'Verifique o spam ou tente novamente.'}</p>`;
@@ -356,9 +357,9 @@ function agendaView() {
       <h3 class="title-m">${esc(next.title)}</h3><p class="muted clip">${esc(next.desc)}</p></div>
       <div class="inner" style="text-align:center;padding:8px 12px"><div class="eyebrow">${live ? 'Termina' : 'Inicia em'}</div><div class="mono" style="font-weight:700;font-size:18px">${live ? next.end : countdown(sessionTs(next) - t)}</div></div></div></div>` : ''}
     ${ann ? `<div class="banner ${ann.kind === 'alert' ? 'alert' : ''}"><b>${esc(ann.title)}</b><div>${esc(ann.body)}</div><div class="muted">${timeAgo(ann.at)}</div></div>` : ''}
-    <div class="sec-title"><span class="label">Cronograma trienal</span><span class="muted row" style="gap:4px">${icon('schedule', 'i-s')}Fuso Recife (GMT-3)</span></div>
-    <div class="chips scroll-x" style="gap:12px">${days.map((d) => `<button class="day ${S.day === d.id ? 'on' : ''}" data-act="day" data-id="${d.id}"><span class="eyebrow"><span>${new Date(d.date + 'T12:00:00').getDate().toString().padStart(2, '0')} NOV</span>${d.id === todayId ? '<span>●</span>' : ''}</span><span class="t">${esc(d.title)}</span><span class="s">${esc(d.subtitle)}</span></button>`).join('')}</div>
-    <div class="chips scroll-x"><button class="chip solid ${!S.room && !S.favOnly ? 'on' : ''}" data-act="room" data-v="">Todas as Salas</button>${S.ev.event.rooms.map((r) => `<button class="chip ${S.room === r ? 'on' : ''}" data-act="room" data-v="${esc(r)}">${esc(r)}</button>`).join('')}<button class="chip ${S.favOnly ? 'on' : ''}" data-act="favonly">★ Minhas</button></div>
+    <div class="sec-title"><span class="label">Programação · ${fmtDay(days[0].date)}</span><span class="muted row" style="gap:4px">${icon('schedule', 'i-s')}Fuso Recife (GMT-3)</span></div>
+    ${days.length > 1 ? `<div class="chips scroll-x" style="gap:12px">${days.map((d) => `<button class="day ${S.day === d.id ? 'on' : ''}" data-act="day" data-id="${d.id}"><span class="eyebrow"><span>${new Date(d.date + 'T12:00:00').getDate().toString().padStart(2, '0')} NOV</span>${d.id === todayId ? '<span>●</span>' : ''}</span><span class="t">${esc(d.title)}</span><span class="s">${esc(d.subtitle)}</span></button>`).join('')}</div>` : ''}
+    ${S.ev.event.rooms.length > 1 ? `<div class="chips scroll-x"><button class="chip solid ${!S.room && !S.favOnly ? 'on' : ''}" data-act="room" data-v="">Todas as Salas</button>${S.ev.event.rooms.map((r) => `<button class="chip ${S.room === r ? 'on' : ''}" data-act="room" data-v="${esc(r)}">${esc(r)}</button>`).join('')}<button class="chip ${S.favOnly ? 'on' : ''}" data-act="favonly">★ Minhas</button></div>` : `<div class="chips"><button class="chip ${S.favOnly ? 'on' : ''}" data-act="favonly">★ Minhas</button></div>`}
     ${list.map(sessionCard).join('') || '<div class="empty">Nada por aqui.</div>'}`;
 }
 
@@ -368,6 +369,7 @@ function sessionView(id) {
   return `<div class="card"><div class="row" style="gap:6px;flex-wrap:wrap">${isLive(s) ? '<span class="pill-tag live"><span class="d"></span>Ao vivo</span>' : ''}<span class="pill-tag ${TAGCLS[s.tag] || ''}">${esc(s.tag)}</span></div>
     <div class="label">${fmtDay(S.ev.event.days.find((d) => d.id === s.day).date)} · ${s.start}–${s.end} · ${esc(s.room)}</div>
     <h2 class="title-l">${esc(s.title)}</h2>${s.speaker ? `<div class="muted">${esc(s.speaker)}</div>` : ''}<p>${esc(s.desc)}</p>
+    ${(s.people || []).map((p) => `<div class="inner row"><div class="avatar sm">${esc(initials(p.name))}</div><div class="grow"><b>${esc(p.name)}</b><div class="muted">${esc(p.role)}</div></div></div>`).join('')}
     <button class="btn ${fav ? 'tonal' : ''}" data-act="fav" data-id="${id}">${icon(fav ? 'notifications_active' : 'notifications', fav ? 'fill' : '')} ${fav ? 'Notificação ativa' : 'Notificar-me 10 min antes'}</button></div>
     ${polls.map(pollCard).join('')}
     <div class="sec-title"><h3>Perguntas ao vivo</h3></div>
@@ -444,13 +446,31 @@ function chatView() {
 }
 const composer = () => `<form id="msgForm" class="composer"><input name="text" placeholder="Mensagem" autocomplete="off" maxlength="1000"><button class="btn" aria-label="Enviar">${icon('send')}</button></form>`;
 
+// ----- Diálogo de confirmação (substitui window.confirm; acessível e com estilo da app) -----
+function confirmDialog({ title, body = '', confirmLabel = 'Confirmar', danger = false }) {
+  return new Promise((resolve) => {
+    const prev = document.activeElement;
+    const el = document.createElement('div'); el.id = 'dlg';
+    el.innerHTML = `<div class="dlg-box" role="alertdialog" aria-modal="true" aria-labelledby="dlgT" aria-describedby="dlgB">
+      <div class="dlg-ic ${danger ? 'danger' : ''}">${icon(danger ? 'warning' : 'help')}</div>
+      <h3 id="dlgT" class="h-md">${esc(title)}</h3><div id="dlgB" class="muted dlg-body">${body}</div>
+      <div class="dlg-actions"><button class="btn tonal" data-d="0">Cancelar</button><button class="btn ${danger ? 'danger' : ''}" data-d="1">${esc(confirmLabel)}</button></div></div>`;
+    const done = (v) => { document.removeEventListener('keydown', onKey, true); el.remove(); prev?.focus?.(); resolve(v); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); done(false); } else if (e.key === 'Tab') { const b = [...el.querySelectorAll('button')]; const i = b.indexOf(document.activeElement); e.preventDefault(); b[(i + (e.shiftKey ? b.length - 1 : 1)) % b.length].focus(); } };
+    el.addEventListener('click', (e) => { if (e.target === el) done(false); const d = e.target.closest('[data-d]'); if (d) done(d.dataset.d === '1'); });
+    document.addEventListener('keydown', onKey, true);
+    document.body.append(el);
+    el.querySelector('[data-d="0"]').focus();
+  });
+}
+
 // ----- Modo administrador -----
 const adminOn = () => !!S.me?.isAdmin && localStorage.getItem('ofg_mode') !== 'user';
 const fmtDT = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 async function loadAdmin() {
   try {
-    const [stats, users] = await Promise.all([api('/admin/stats'), api('/admin/users')]);
-    S.adm = { stats, users };
+    const [stats, users, anns] = await Promise.all([api('/admin/stats'), api('/admin/users'), api('/admin/announcements')]);
+    S.adm = { stats, users, anns };
   } catch (e) { console.error('admin', e); S.adm = { ...(S.adm || {}), error: e.message }; }
 }
 const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
@@ -507,19 +527,33 @@ function adminUserRow(u) {
   const self = u.id === S.me.id;
   return `<div class="card pad-s"><div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div>${u.phone ? `<div class="muted clip">${icon('call', 'i-s')} ${esc(u.phone)}</div>` : ''}</div></div>
     <div class="chips"><span class="chip static">Check-in ${days}/${S.ev.event.days.length}</span><span class="chip static">${u.points} pts</span>${u.push ? '<span class="chip static on">Push</span>' : ''}<span class="chip static">${fmtDT(u.createdAt)}</span></div>
-    <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button></div>`;
+    <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button>
+    ${u.isAdmin ? '' : `<button class="btn small danger-o" data-act="deluser" data-id="${u.id}">${icon('delete', 'i-s')} Excluir inscrito</button>`}</div>`;
 }
 
 function adminComms() {
-  const anns = S.ev.announcements;
-  return `<form id="annForm" class="card" style="gap:14px"><h3 class="h-md">Enviar aviso a todos</h3>
-      <div class="field"><label>Título <span style="color:var(--primary)">*</span></label><input name="title" required maxlength="80" placeholder="Ex.: Mudança de sala"></div>
-      <div class="field"><label>Mensagem</label><textarea name="body" maxlength="400" placeholder="Detalhes do aviso"></textarea></div>
-      <label class="row muted" style="gap:10px"><input type="checkbox" name="alert"> Marcar como alerta (mudança de sala, atraso…)</label>
-      <button class="btn block">${icon('send', 'i-s')} Enviar aviso</button>
-      <p class="muted">Chega em tempo real a quem tem a app aberta e por notificação push a quem as ativou.</p></form>
+  const to = S.annTo || 'all', users = S.adm?.users || [];
+  S.annSel = S.annSel || new Set();
+  const n = S.annSel.size, hist = S.adm?.anns;
+  const btnLabel = to === 'all' ? `Enviar a todos${users.length ? ` (${users.length})` : ''}` : `Enviar a ${n} inscrito${n === 1 ? '' : 's'}`;
+  const picker = to === 'custom' ? `<div class="picker"><div class="search">${icon('search')}<input id="annSearch" type="search" placeholder="Filtrar por nome, empresa ou email…"></div>
+      <div class="row between"><span class="muted" id="annCount">${n} selecionado${n === 1 ? '' : 's'}</span><div class="row" style="gap:0"><button type="button" class="btn small text" data-act="annall">Selecionar visíveis</button><button type="button" class="btn small text" data-act="annnone">Limpar</button></div></div>
+      <div class="plist" id="annList">${users.map((u) => `<label class="prow" data-q="${esc([u.name, u.email, u.company, u.role].join(' ').toLowerCase())}"><input type="checkbox" data-ann="${u.id}" ${S.annSel.has(u.id) ? 'checked' : ''}><span class="avatar sm">${esc(initials(u.name))}</span><span class="grow clip"><b>${esc(u.name)}</b><div class="muted clip">${esc([u.company, u.email].filter(Boolean).join(' · '))}</div></span></label>`).join('') || '<div class="empty">Sem inscritos.</div>'}</div></div>` : '';
+  const audience = (a) => a.audience === 'all' ? '<span class="pill-tag">Todos</span>' : `<span class="pill-tag gray">${a.count} inscrito${a.count === 1 ? '' : 's'}</span>`;
+  const list = hist || S.ev.announcements.map((x) => ({ ...x, audience: 'all', count: users.length, names: [] }));
+  return `<form id="annForm" class="card" style="gap:14px"><h3 class="h-md">Enviar aviso</h3>
+      <div class="field"><label>Destinatários</label><div class="chips">
+        <button type="button" class="chip ${to === 'all' ? 'on' : ''}" data-act="annto" data-v="all">${icon('groups', 'i-s')} Todos os inscritos</button>
+        <button type="button" class="chip ${to === 'custom' ? 'on' : ''}" data-act="annto" data-v="custom">${icon('person_search', 'i-s')} Selecionar inscritos</button></div></div>
+      ${picker}
+      <div class="field"><label>Título <span style="color:var(--primary)">*</span></label><input name="title" required maxlength="80" placeholder="Ex.: Mudança de sala" value="${esc(S.draft.title || '')}"></div>
+      <div class="field"><label>Mensagem</label><textarea name="body" maxlength="400" placeholder="Detalhes do aviso">${esc(S.draft.body || '')}</textarea></div>
+      <label class="row muted" style="gap:10px"><input type="checkbox" name="alert" ${S.draft.alert ? 'checked' : ''}> Marcar como alerta (mudança de sala, atraso…)</label>
+      <button class="btn block" id="annBtn">${icon('send', 'i-s')} <span id="annBtnTxt">${btnLabel}</span></button>
+      <p class="muted">${to === 'all' ? 'Aparece no feed de avisos de todos, chega em tempo real a quem tem a app aberta e por push a quem o ativou.' : 'Aviso privado: só os selecionados o recebem (notificações e push). Não aparece no feed geral.'}</p></form>
     <div class="sec-title"><h3>Avisos enviados</h3></div>
-    ${anns.map((a) => `<div class="card pad-s ${a.kind === 'alert' ? '' : 'filled'}" ${a.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(a.title)}</b><span class="muted">${fmtDT(a.at)}</span></div><div class="muted">${esc(a.body)}</div></div>`).join('') || '<div class="empty">Nenhum aviso enviado.</div>'}`;
+    ${list.map((x) => `<div class="card pad-s ${x.kind === 'alert' ? '' : 'filled'}" ${x.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(x.title)}</b><span class="muted">${fmtDT(x.at)}</span></div><div class="muted">${esc(x.body)}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${audience(x)}${x.audience === 'custom' && x.names?.length ? `<span class="muted clip" style="flex:1">${esc(x.names.join(', '))}${x.count > x.names.length ? '…' : ''}</span>` : ''}</div></div>`).join('') || '<div class="empty">Nenhum aviso enviado.</div>'}`;
 }
 
 function adminLive() {
@@ -645,9 +679,11 @@ function liveView() {
 function eventView() {
   const e = S.ev.event, v = e.venue;
   return `
-    <div class="card hero"><span class="pill-tag" style="background:var(--ink);color:var(--primary);align-self:flex-start">Edição especial · 33 anos</span>
+    <div class="card hero"><span class="pill-tag" style="background:var(--ink);color:var(--primary);align-self:flex-start">Entrada solidária</span>
       <h2 class="display" style="font-size:26px;line-height:32px">${esc(e.theme.title)}</h2><p class="muted" style="color:var(--hero-sub)">${esc(e.theme.subtitle)}</p>
       <div class="inner" style="background:var(--hero-tint);border:0"><div class="eyebrow">Tema central</div><b>${esc(e.theme.central)}</b></div></div>
+    <div class="card"><h3 class="h-md">Temas do painel</h3>${(e.topics || []).map((t) => `<div class="row top">${icon('check_circle', 'i-s')}<span class="grow">${esc(t)}</span></div>`).join('')}</div>
+    ${(S.ev.speakers || []).length ? `<div class="sec-title"><h3>Sobre os palestrantes</h3></div>${S.ev.speakers.map((p) => `<div class="card"><div class="row top"><div class="avatar">${esc(initials(p.name))}</div><div class="grow"><b>${esc(p.name)}</b><div class="muted">${esc(p.role)}</div></div></div><p class="muted">${esc(p.bio)}</p></div>`).join('')}` : ''}
     <div class="card"><div class="row between"><h3 class="h-md row" style="gap:8px">${icon('domain')}Local do Evento</h3></div>
       <div><b>${esc(v.name)}</b><div class="muted">${esc(v.address)}</div><div class="muted">${esc(v.room)}</div></div>
       <iframe class="map" title="Mapa" loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(v.mapsQuery)}&output=embed"></iframe>
@@ -656,7 +692,7 @@ function eventView() {
       ${S.ev.announcements.map((a) => `<div class="inner" ${a.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(a.title)}</b><span class="muted">${timeAgo(a.at)}</span></div><div class="muted">${esc(a.body)}</div></div>`).join('') || '<div class="muted">Sem avisos por agora.</div>'}</div>
     <div class="sec-title"><h3>Informações &amp; Logística</h3></div>
     ${S.ev.faqs.map((f) => `<details class="card pad-s"><summary>${esc(f.q)}${icon('expand_more')}</summary><p>${esc(f.a)}</p></details>`).join('')}
-    <div class="card" style="text-align:center"><div class="eyebrow">Alianças estratégicas</div><h3 class="h-md">Correalização &amp; Apoio Institucional</h3>
+    <div class="card" style="text-align:center"><div class="eyebrow">Organização e causa</div><h3 class="h-md">Apoio Institucional</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${S.ev.sponsors.map((s) => `<div class="inner">${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener" style="text-decoration:none"><b>${esc(s.name)}</b></a>` : `<b>${esc(s.name)}</b>`}<div class="muted">${esc(s.tier)}</div></div>`).join('')}</div></div>`;
 }
 
@@ -719,15 +755,25 @@ document.addEventListener('click', async (e) => {
     else if (act === 'admfilter') S.admFilter = v;
     else if (act === 'role') {
       const u = S.adm.users.find((x) => x.id === id);
-      if (!confirm(v === '1' ? `Promover ${u.name} a administrador? Terá acesso total ao painel.` : `Remover o acesso de administrador de ${u.name}?`)) return;
+      if (!(await confirmDialog({ title: v === '1' ? 'Promover a administrador?' : 'Remover acesso de administrador?', body: v === '1' ? `<b>${esc(u.name)}</b> terá acesso total ao painel de administração.` : `<b>${esc(u.name)}</b> deixará de ter acesso ao painel de administração.`, confirmLabel: v === '1' ? 'Promover' : 'Remover' }))) return;
       await api('/admin/users/role', { method: 'POST', body: { id, admin: v === '1' } }); await loadAdmin(); toast('Permissões atualizadas', u.name);
     }
+    else if (act === 'deluser') {
+      const u = S.adm.users.find((x) => x.id === id);
+      const ok = await confirmDialog({ title: 'Excluir inscrito?', danger: true, confirmLabel: 'Excluir definitivamente',
+        body: `Vai excluir <b>${esc(u.name)}</b> (${esc(u.email)}). Serão apagados o perfil, as conexões, as mensagens, as notificações, os votos e as perguntas desta pessoa. <b>Esta ação não pode ser desfeita.</b>` });
+      if (!ok) return;
+      await api('/admin/users/delete', { method: 'POST', body: { id } }); await loadAdmin(); toast('Inscrito excluído', u.name);
+    }
+    else if (act === 'annto') { S.annTo = v; }
+    else if (act === 'annall') { document.querySelectorAll('#annList .prow:not([hidden]) input').forEach((i) => { i.checked = true; S.annSel.add(i.dataset.ann); }); annUpdate(); return; }
+    else if (act === 'annnone') { S.annSel = new Set(); document.querySelectorAll('#annList input').forEach((i) => (i.checked = false)); annUpdate(); return; }
     else if (act === 'exportcsv') { exportCSV(); return; }
     else if (act === 'copyurl') { await navigator.clipboard?.writeText(location.origin + v); toast('Link copiado', location.origin + v); return; }
     else if (act === 'copylink') { await navigator.clipboard?.writeText(`${location.origin}/?checkin=${v}`); toast('Link copiado'); return; }
     else if (act === 'closepoll') { await api('/admin/poll/close', { method: 'POST', body: { id } }); await loadAdmin(); }
-    else if (act === 'delpoll') { if (!confirm('Apagar esta enquete e os seus votos?')) return; await api('/admin/poll/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
-    else if (act === 'delq') { if (!confirm('Apagar esta pergunta?')) return; await api('/admin/question/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
+    else if (act === 'delpoll') { if (!(await confirmDialog({ title: 'Apagar enquete?', body: 'A enquete e todos os seus votos serão apagados.', confirmLabel: 'Apagar', danger: true }))) return; await api('/admin/poll/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
+    else if (act === 'delq') { if (!(await confirmDialog({ title: 'Apagar pergunta?', body: 'A pergunta será removida para todos os participantes.', confirmLabel: 'Apagar', danger: true }))) return; await api('/admin/question/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
     else if (act === 'day') S.day = id;
     else if (act === 'room') { S.room = v; S.favOnly = false; }
     else if (act === 'favonly') { S.favOnly = !S.favOnly; if (S.favOnly) S.room = ''; }
@@ -781,7 +827,17 @@ async function onSubmit(f, d) {
     }
     if (f.id === 'recoverForm') { S.recoverEmail = d.email.trim().toLowerCase(); await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); S.recoverSent = true; S.err = ''; }
     if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
-    if (f.id === 'annForm') { await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info' } }); const ev = await api('/event'); S.ev.announcements = ev.announcements; f.reset(); toast('Aviso enviado'); }
+    if (f.id === 'annForm') {
+      const custom = (S.annTo || 'all') === 'custom', ids = custom ? [...(S.annSel || [])] : null;
+      if (custom && !ids.length) throw new Error('Selecione pelo menos um destinatário');
+      const total = S.adm?.users?.length || 0, n = custom ? ids.length : total;
+      const ok = await confirmDialog({ title: 'Enviar aviso?', confirmLabel: 'Enviar', body: `<b>${esc(d.title)}</b><br>Será enviado a ${custom ? `<b>${n} inscrito${n === 1 ? '' : 's'}</b> selecionado${n === 1 ? '' : 's'}` : `<b>todos os ${total} inscritos</b>`}${d.alert ? ' como <b>alerta</b>' : ''}.` });
+      if (!ok) return;
+      const r = await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info', ...(custom ? { recipients: ids } : {}) } });
+      const ev = await api('/event'); S.ev.announcements = ev.announcements; await loadAdmin();
+      S.draft.title = S.draft.body = ''; S.draft.alert = false; S.annSel = new Set();
+      toast('Aviso enviado', `Entregue a ${r.sent} inscrito${r.sent === 1 ? '' : 's'}`);
+    }
     if (f.id === 'pollForm') { await api('/admin/poll', { method: 'POST', body: { sessionId: d.sessionId, question: d.question, options: d.options.split('\n') } }); await loadAdmin(); f.reset(); toast('Enquete aberta'); }
     if (f.id === 'onbForm') {
       if (!d.company.trim() || !d.role.trim() || !d.phone.trim()) throw new Error('Empresa, cargo e telefone são obrigatórios');
@@ -800,7 +856,7 @@ async function onSubmit(f, d) {
 // guarda o que foi escrito nos formulários de autenticação, para não perder ao voltar a desenhar a tela
 document.addEventListener('input', (e) => {
   const f = e.target.form;
-  if (f && ['authForm', 'resetForm', 'recoverForm', 'onbForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
+  if (f && ['authForm', 'resetForm', 'recoverForm', 'onbForm', 'annForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
 });
 
 document.addEventListener('change', (e) => {
@@ -815,6 +871,22 @@ document.addEventListener('input', (e) => {
   S.admQ = e.target.value; const l = document.getElementById('admList'); if (!l) return;
   const f = S.admFilter || 'all', qs = S.admQ.toLowerCase();
   l.innerHTML = S.adm.users.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length)) && (!qs || [u.name, u.email, u.phone, u.company, u.role].join(' ').toLowerCase().includes(qs))).map(adminUserRow).join('') || '<div class="empty">Ninguém encontrado.</div>';
+});
+
+function annUpdate() {
+  const n = S.annSel.size, c = document.getElementById('annCount'), b = document.getElementById('annBtnTxt');
+  if (c) c.textContent = `${n} selecionado${n === 1 ? '' : 's'}`;
+  if (b && (S.annTo || 'all') === 'custom') b.textContent = `Enviar a ${n} inscrito${n === 1 ? '' : 's'}`;
+}
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset?.ann) { S.annSel = S.annSel || new Set(); t.checked ? S.annSel.add(t.dataset.ann) : S.annSel.delete(t.dataset.ann); annUpdate(); }
+  if (t.form?.id === 'annForm' && t.name === 'alert') S.draft.alert = t.checked;
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'annSearch') return;
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#annList .prow').forEach((r) => { r.hidden = !!q && !r.dataset.q.includes(q); });
 });
 
 let searchT;
