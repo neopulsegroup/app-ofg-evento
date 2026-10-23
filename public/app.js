@@ -4,7 +4,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const icon = (n, cls = '') => `<span class="material-symbols-outlined ${cls}">${n}</span>`;
 
 // ---------- tema (escuro/claro) ----------
-const getTheme = () => { try { return localStorage.getItem('ofg_theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } };
+// o modo claro é o padrão; só fica escuro se a pessoa o escolher (guardado como 'dark')
+const getTheme = () => { try { return localStorage.getItem('ofg_theme') === 'dark' ? 'dark' : 'light'; } catch { return 'light'; } };
 function applyTheme(t) {
   if (t === 'light') document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme;
   try { localStorage.setItem('ofg_theme', t); } catch { /* sem armazenamento: vale só nesta sessão */ }
