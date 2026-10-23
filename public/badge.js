@@ -2,8 +2,8 @@
 const TASKS = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
 const QR_URL = '/vendor/qrcode.min.js';
-// 5 marcas da logo espalhadas pelo fundo: [esquerda %, topo %, rotação °, largura %]
-const MARKS = [[7, 6, -14, 24], [66, 3, 10, 26], [4, 43, 16, 22], [71, 40, -12, 23], [10, 66, 8, 20]];
+// 4 marcas da logo espalhadas pelo fundo: [esquerda %, topo %, rotação °, largura %]
+const MARKS = [[3, 23, -14, 31], [66, 21, 10, 31], [1, 55, 12, 31], [70, 54, -10, 31]];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const initials = (n) => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
 const OUT_W = 480, OUT_H = 600; // retrato 4:5
@@ -110,7 +110,7 @@ export function badgeHtml(u, ev) {
     <div class="pc-inside">
       ${MARKS.map(([x, y, r, w]) => `<i class="pc-mark" style="left:${x}%;top:${y}%;width:${w}%;--r:${r}deg"></i>`).join('')}
       ${u.photo ? `<img class="pc-avatar" src="${esc(u.photo)}" alt="" crossorigin="anonymous">` : `<div class="pc-initials">${esc(initials(u.name))}</div>`}
-      <div class="pc-shine"></div><div class="pc-glare"></div>
+      <div class="pc-scrim"></div><div class="pc-shine"></div><div class="pc-glare"></div>
       <div class="pc-head"><div class="pc-event">${esc(ev.name)} · 3 NOV 2026</div><h2>${esc(u.name)}</h2><p>${esc(sub)}</p></div>
       <div class="pc-foot"><div class="pc-who"><span class="pc-tag">PARTICIPANTE</span><b>${esc(u.company || ev.venue.name)}</b><span>${esc(u.role || ev.tagline)}</span></div><div class="pc-qr" id="pcQr" title="QR do contacto"></div></div>
     </div></div></div>`;
@@ -148,22 +148,23 @@ export async function badgeBlob(u, ev) {
   const r1 = x.createRadialGradient(W * 0.2, H * 0.15, 0, W * 0.2, H * 0.15, W * 0.7); r1.addColorStop(0, 'rgba(120,180,255,.45)'); r1.addColorStop(1, 'rgba(120,180,255,0)'); x.fillStyle = r1; x.fillRect(0, 0, W, H);
   const r2 = x.createRadialGradient(W * 0.9, H * 0.55, 0, W * 0.9, H * 0.55, W * 0.6); r2.addColorStop(0, 'rgba(190,120,255,.30)'); r2.addColorStop(1, 'rgba(190,120,255,0)'); x.fillStyle = r2; x.fillRect(0, 0, W, H);
   const [logo, photo] = await Promise.all([img('/media/logo-metal.png'), u.photo ? img(u.photo) : null]);
-  if (logo) { // 5 marcas da logo com acabamento metálico
+  if (logo) { // 4 marcas da logo com acabamento metálico
     const t = canvasOf(W, H), tx = t.getContext('2d'), mg = tx.createLinearGradient(0, 0, W, H);
     ['#6f7f97', '#f6f9ff', '#8190a8', '#dfe8f6', '#75849c', '#f2f6fd', '#6f7f97'].forEach((c, i, a) => mg.addColorStop(i / (a.length - 1), c));
     tx.fillStyle = mg; tx.fillRect(0, 0, W, H);
     tx.globalCompositeOperation = 'destination-in';
     for (const [mx, my, rot, mw] of MARKS) {
-      const sz = (W * mw) / 100; tx.save(); tx.translate((W * mx) / 100 + sz / 2, (H * (my * 0.72)) / 100 + sz / 2); tx.rotate((rot * Math.PI) / 180); tx.drawImage(logo, -sz / 2, -sz / 2, sz, sz); tx.restore();
+      const sz = (W * mw) / 100; tx.save(); tx.translate((W * mx) / 100 + sz / 2, (H * my) / 100 + sz / 2); tx.rotate((rot * Math.PI) / 180); tx.drawImage(logo, -sz / 2, -sz / 2, sz, sz); tx.restore();
     }
-    x.globalAlpha = 0.85; x.drawImage(t, 0, 0); x.globalAlpha = 1;
+    x.globalAlpha = 0.38; x.drawImage(t, 0, 0); x.globalAlpha = 1;
   }
   if (photo) { const ph = H * 0.74, pw = ph * (photo.width / photo.height); x.drawImage(photo, (W - pw) / 2, H - ph - 40, pw, ph); }
   else { x.fillStyle = 'rgba(255,255,255,.14)'; x.beginPath(); x.arc(W / 2, H * 0.58, 230, 0, 7); x.fill(); x.fillStyle = '#fff'; x.font = '800 190px "Plus Jakarta Sans", Inter, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(initials(u.name), W / 2, H * 0.58); }
-  x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(255,255,255,.75)'; x.font = '700 30px Inter, sans-serif';
+  const sc = x.createLinearGradient(0, 0, 0, H * 0.3); sc.addColorStop(0, 'rgba(6,14,32,.88)'); sc.addColorStop(1, 'rgba(6,14,32,0)'); x.fillStyle = sc; x.fillRect(0, 0, W, H * 0.3);
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 14; x.fillStyle = '#fff'; x.font = '800 30px Inter, sans-serif';
   x.fillText(`${ev.name.toUpperCase()} · 3 NOV 2026`, W / 2, 96);
   x.fillStyle = '#fff'; x.font = '800 84px "Plus Jakarta Sans", Inter, sans-serif'; x.fillText(fit(x, u.name, W - 120), W / 2, 196);
-  x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '500 38px Inter, sans-serif'; x.fillText(fit(x, [u.role, u.company].filter(Boolean).join(' · '), W - 120), W / 2, 252);
+  x.fillStyle = '#fff'; x.font = '600 38px Inter, sans-serif'; x.fillText(fit(x, [u.role, u.company].filter(Boolean).join(' · '), W - 120), W / 2, 252); x.shadowBlur = 0; x.shadowColor = 'transparent';
   // barra inferior com empresa e QR
   x.fillStyle = 'rgba(8,18,40,.62)'; x.beginPath(); x.roundRect(40, H - 230, W - 80, 190, 40); x.fill();
   x.textAlign = 'left'; x.fillStyle = '#9cc6ff'; x.font = '800 24px Inter, sans-serif'; x.fillText('PARTICIPANTE', 80, H - 160);
