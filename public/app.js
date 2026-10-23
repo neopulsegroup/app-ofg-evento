@@ -414,7 +414,7 @@ function networkView() {
   const people = S.interest ? S.people.filter((u) => u.interests.includes(S.interest)) : S.people;
   const filters = S.ev.interests.slice(0, 4);
   return `
-    <div class="card pad-s row clickable" data-act="badge"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div>
+    <div class="card pad-s row clickable" data-act="badge"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('badge')}</div>
       <div class="grow"><div class="eyebrow blue">Crachá do evento</div><div class="title-m">Visualizar o meu crachá</div></div>${icon('chevron_right')}</div>
     <div class="card pad-s row"><div class="avatar" style="background:none;border:2px solid var(--primary);color:var(--primary)">${icon(pc === 100 ? 'check_circle' : 'person')}</div>
       <div class="grow"><div class="eyebrow" style="color:var(--success)">Perfil ${pc}% completo</div><div class="title-m">${pc === 100 ? 'Pronto para fazer networking' : 'Complete para melhores sugestões'}</div></div>
