@@ -317,3 +317,9 @@ html.doc, body.doc { height: auto; min-height: 100%; overflow: auto; }
 .doc-body ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
 .doc-foot { max-width: 760px; margin: 0 auto; padding: 24px 16px calc(32px + env(safe-area-inset-bottom)); text-align: center; border-top: 1px solid var(--line); font-size: 14px; }
 .doc-foot a, .doc-body a { color: var(--primary); }
+
+/* foto do local (tela "Acessar Credencial") */
+.hero-img.has-photo::after { display: none; }
+.hero-img .hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 30% 55%; z-index: 0; }
+.hero-img.has-photo::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(8,12,18,.05) 35%, rgba(8,12,18,.78)); }
+.hero-img .photo-cap { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 2; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.65); gap: 6px; }

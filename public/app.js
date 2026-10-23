@@ -299,7 +299,7 @@ function authView() {
     <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
       <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Rotas &amp; Oportunidades</span>
       <h1 class="display">Acessar Credencial</h1><p class="muted" style="font-size:15px">Entre com seu e-mail corporativo cadastrado para acessar a programação, reuniões e networking.</p></div>
-    <div class="hero-img" style="height:150px;border-radius:20px"><b style="position:absolute;left:16px;bottom:14px" class="row">${icon('location_on')} Hub Plural Espinheiro · Recife/PE</b></div>
+    <div class="hero-img has-photo" style="height:170px;border-radius:20px"><img class="hero-photo" src="/media/hub-plural.jpg" alt="Hub Plural Espinheiro" loading="eager"><b class="photo-cap row">${icon('location_on')} Hub Plural Espinheiro · Recife/PE</b></div>
     <form id="authForm" class="field" style="gap:16px">
       ${field('email', 'E-mail corporativo', 'ex: nome@empresa.com', { req: 1, hint: 'Acesso homologado', icon: 'mail', type: 'email', ac: 'email' })}
       ${field('password', 'Senha de acesso', 'Sua senha de acesso', { req: 1, icon: 'lock', type: 'password', pw: 1, ac: 'current-password' })}
