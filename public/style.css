@@ -323,3 +323,14 @@ html.doc, body.doc { height: auto; min-height: 100%; overflow: auto; }
 .hero-img .hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 30% 55%; z-index: 0; }
 .hero-img.has-photo::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(8,12,18,.05) 35%, rgba(8,12,18,.78)); }
 .hero-img .photo-cap { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 2; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.65); gap: 6px; }
+
+/* diálogo de confirmação */
+#dlg { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 20px; background: rgba(8,12,18,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fadein .15s; }
+.dlg-box { width: min(420px, 100%); background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow-2); }
+.dlg-ic { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--primary-tint); color: var(--primary); }
+.dlg-ic.danger { background: rgba(239,68,68,.14); color: var(--live-fg); }
+.dlg-body { font-size: 14px; line-height: 21px; }
+.dlg-body b { color: var(--text); }
+.dlg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+.btn.danger { background: var(--live); color: #fff; }
+.btn.danger-o { background: none; color: var(--live-fg); border: 1px solid rgba(239,68,68,.45); }

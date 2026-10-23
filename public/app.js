@@ -445,6 +445,24 @@ function chatView() {
 }
 const composer = () => `<form id="msgForm" class="composer"><input name="text" placeholder="Mensagem" autocomplete="off" maxlength="1000"><button class="btn" aria-label="Enviar">${icon('send')}</button></form>`;
 
+// ----- Diálogo de confirmação (substitui window.confirm; acessível e com estilo da app) -----
+function confirmDialog({ title, body = '', confirmLabel = 'Confirmar', danger = false }) {
+  return new Promise((resolve) => {
+    const prev = document.activeElement;
+    const el = document.createElement('div'); el.id = 'dlg';
+    el.innerHTML = `<div class="dlg-box" role="alertdialog" aria-modal="true" aria-labelledby="dlgT" aria-describedby="dlgB">
+      <div class="dlg-ic ${danger ? 'danger' : ''}">${icon(danger ? 'warning' : 'help')}</div>
+      <h3 id="dlgT" class="h-md">${esc(title)}</h3><div id="dlgB" class="muted dlg-body">${body}</div>
+      <div class="dlg-actions"><button class="btn tonal" data-d="0">Cancelar</button><button class="btn ${danger ? 'danger' : ''}" data-d="1">${esc(confirmLabel)}</button></div></div>`;
+    const done = (v) => { document.removeEventListener('keydown', onKey, true); el.remove(); prev?.focus?.(); resolve(v); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); done(false); } else if (e.key === 'Tab') { const b = [...el.querySelectorAll('button')]; const i = b.indexOf(document.activeElement); e.preventDefault(); b[(i + (e.shiftKey ? b.length - 1 : 1)) % b.length].focus(); } };
+    el.addEventListener('click', (e) => { if (e.target === el) done(false); const d = e.target.closest('[data-d]'); if (d) done(d.dataset.d === '1'); });
+    document.addEventListener('keydown', onKey, true);
+    document.body.append(el);
+    el.querySelector('[data-d="0"]').focus();
+  });
+}
+
 // ----- Modo administrador -----
 const adminOn = () => !!S.me?.isAdmin && localStorage.getItem('ofg_mode') !== 'user';
 const fmtDT = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -508,7 +526,8 @@ function adminUserRow(u) {
   const self = u.id === S.me.id;
   return `<div class="card pad-s"><div class="row"><div class="avatar">${esc(initials(u.name))}</div><div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div>${u.phone ? `<div class="muted clip">${icon('call', 'i-s')} ${esc(u.phone)}</div>` : ''}</div></div>
     <div class="chips"><span class="chip static">Check-in ${days}/${S.ev.event.days.length}</span><span class="chip static">${u.points} pts</span>${u.push ? '<span class="chip static on">Push</span>' : ''}<span class="chip static">${fmtDT(u.createdAt)}</span></div>
-    <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button></div>`;
+    <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button>
+    ${u.isAdmin ? '' : `<button class="btn small danger-o" data-act="deluser" data-id="${u.id}">${icon('delete', 'i-s')} Excluir inscrito</button>`}</div>`;
 }
 
 function adminComms() {
@@ -720,15 +739,22 @@ document.addEventListener('click', async (e) => {
     else if (act === 'admfilter') S.admFilter = v;
     else if (act === 'role') {
       const u = S.adm.users.find((x) => x.id === id);
-      if (!confirm(v === '1' ? `Promover ${u.name} a administrador? Terá acesso total ao painel.` : `Remover o acesso de administrador de ${u.name}?`)) return;
+      if (!(await confirmDialog({ title: v === '1' ? 'Promover a administrador?' : 'Remover acesso de administrador?', body: v === '1' ? `<b>${esc(u.name)}</b> terá acesso total ao painel de administração.` : `<b>${esc(u.name)}</b> deixará de ter acesso ao painel de administração.`, confirmLabel: v === '1' ? 'Promover' : 'Remover' }))) return;
       await api('/admin/users/role', { method: 'POST', body: { id, admin: v === '1' } }); await loadAdmin(); toast('Permissões atualizadas', u.name);
+    }
+    else if (act === 'deluser') {
+      const u = S.adm.users.find((x) => x.id === id);
+      const ok = await confirmDialog({ title: 'Excluir inscrito?', danger: true, confirmLabel: 'Excluir definitivamente',
+        body: `Vai excluir <b>${esc(u.name)}</b> (${esc(u.email)}). Serão apagados o perfil, as conexões, as mensagens, as notificações, os votos e as perguntas desta pessoa. <b>Esta ação não pode ser desfeita.</b>` });
+      if (!ok) return;
+      await api('/admin/users/delete', { method: 'POST', body: { id } }); await loadAdmin(); toast('Inscrito excluído', u.name);
     }
     else if (act === 'exportcsv') { exportCSV(); return; }
     else if (act === 'copyurl') { await navigator.clipboard?.writeText(location.origin + v); toast('Link copiado', location.origin + v); return; }
     else if (act === 'copylink') { await navigator.clipboard?.writeText(`${location.origin}/?checkin=${v}`); toast('Link copiado'); return; }
     else if (act === 'closepoll') { await api('/admin/poll/close', { method: 'POST', body: { id } }); await loadAdmin(); }
-    else if (act === 'delpoll') { if (!confirm('Apagar esta enquete e os seus votos?')) return; await api('/admin/poll/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
-    else if (act === 'delq') { if (!confirm('Apagar esta pergunta?')) return; await api('/admin/question/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
+    else if (act === 'delpoll') { if (!(await confirmDialog({ title: 'Apagar enquete?', body: 'A enquete e todos os seus votos serão apagados.', confirmLabel: 'Apagar', danger: true }))) return; await api('/admin/poll/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
+    else if (act === 'delq') { if (!(await confirmDialog({ title: 'Apagar pergunta?', body: 'A pergunta será removida para todos os participantes.', confirmLabel: 'Apagar', danger: true }))) return; await api('/admin/question/delete', { method: 'POST', body: { id } }); await loadAdmin(); }
     else if (act === 'day') S.day = id;
     else if (act === 'room') { S.room = v; S.favOnly = false; }
     else if (act === 'favonly') { S.favOnly = !S.favOnly; if (S.favOnly) S.room = ''; }
