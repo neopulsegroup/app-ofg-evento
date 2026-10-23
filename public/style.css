@@ -334,3 +334,13 @@ html.doc, body.doc { height: auto; min-height: 100%; overflow: auto; }
 .dlg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
 .btn.danger { background: var(--live); color: #fff; }
 .btn.danger-o { background: none; color: var(--live-fg); border: 1px solid rgba(239,68,68,.45); }
+
+/* seleção de destinatários dos avisos */
+.picker { display: flex; flex-direction: column; gap: 10px; }
+.plist { max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--input); }
+.prow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.prow:last-child { border-bottom: 0; }
+.prow[hidden] { display: none; }
+.prow input { flex: none; }
+.picker .row.between { flex-wrap: wrap; gap: 4px 8px; }
+.picker .btn.text { white-space: nowrap; padding: 0 10px; }

@@ -468,8 +468,8 @@ const adminOn = () => !!S.me?.isAdmin && localStorage.getItem('ofg_mode') !== 'u
 const fmtDT = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 async function loadAdmin() {
   try {
-    const [stats, users] = await Promise.all([api('/admin/stats'), api('/admin/users')]);
-    S.adm = { stats, users };
+    const [stats, users, anns] = await Promise.all([api('/admin/stats'), api('/admin/users'), api('/admin/announcements')]);
+    S.adm = { stats, users, anns };
   } catch (e) { console.error('admin', e); S.adm = { ...(S.adm || {}), error: e.message }; }
 }
 const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
@@ -531,15 +531,28 @@ function adminUserRow(u) {
 }
 
 function adminComms() {
-  const anns = S.ev.announcements;
-  return `<form id="annForm" class="card" style="gap:14px"><h3 class="h-md">Enviar aviso a todos</h3>
-      <div class="field"><label>Título <span style="color:var(--primary)">*</span></label><input name="title" required maxlength="80" placeholder="Ex.: Mudança de sala"></div>
-      <div class="field"><label>Mensagem</label><textarea name="body" maxlength="400" placeholder="Detalhes do aviso"></textarea></div>
-      <label class="row muted" style="gap:10px"><input type="checkbox" name="alert"> Marcar como alerta (mudança de sala, atraso…)</label>
-      <button class="btn block">${icon('send', 'i-s')} Enviar aviso</button>
-      <p class="muted">Chega em tempo real a quem tem a app aberta e por notificação push a quem as ativou.</p></form>
+  const to = S.annTo || 'all', users = S.adm?.users || [];
+  S.annSel = S.annSel || new Set();
+  const n = S.annSel.size, hist = S.adm?.anns;
+  const btnLabel = to === 'all' ? `Enviar a todos${users.length ? ` (${users.length})` : ''}` : `Enviar a ${n} inscrito${n === 1 ? '' : 's'}`;
+  const picker = to === 'custom' ? `<div class="picker"><div class="search">${icon('search')}<input id="annSearch" type="search" placeholder="Filtrar por nome, empresa ou email…"></div>
+      <div class="row between"><span class="muted" id="annCount">${n} selecionado${n === 1 ? '' : 's'}</span><div class="row" style="gap:0"><button type="button" class="btn small text" data-act="annall">Selecionar visíveis</button><button type="button" class="btn small text" data-act="annnone">Limpar</button></div></div>
+      <div class="plist" id="annList">${users.map((u) => `<label class="prow" data-q="${esc([u.name, u.email, u.company, u.role].join(' ').toLowerCase())}"><input type="checkbox" data-ann="${u.id}" ${S.annSel.has(u.id) ? 'checked' : ''}><span class="avatar sm">${esc(initials(u.name))}</span><span class="grow clip"><b>${esc(u.name)}</b><div class="muted clip">${esc([u.company, u.email].filter(Boolean).join(' · '))}</div></span></label>`).join('') || '<div class="empty">Sem inscritos.</div>'}</div></div>` : '';
+  const audience = (a) => a.audience === 'all' ? '<span class="pill-tag">Todos</span>' : `<span class="pill-tag gray">${a.count} inscrito${a.count === 1 ? '' : 's'}</span>`;
+  const list = hist || S.ev.announcements.map((x) => ({ ...x, audience: 'all', count: users.length, names: [] }));
+  return `<form id="annForm" class="card" style="gap:14px"><h3 class="h-md">Enviar aviso</h3>
+      <div class="field"><label>Destinatários</label><div class="chips">
+        <button type="button" class="chip ${to === 'all' ? 'on' : ''}" data-act="annto" data-v="all">${icon('groups', 'i-s')} Todos os inscritos</button>
+        <button type="button" class="chip ${to === 'custom' ? 'on' : ''}" data-act="annto" data-v="custom">${icon('person_search', 'i-s')} Selecionar inscritos</button></div></div>
+      ${picker}
+      <div class="field"><label>Título <span style="color:var(--primary)">*</span></label><input name="title" required maxlength="80" placeholder="Ex.: Mudança de sala" value="${esc(S.draft.title || '')}"></div>
+      <div class="field"><label>Mensagem</label><textarea name="body" maxlength="400" placeholder="Detalhes do aviso">${esc(S.draft.body || '')}</textarea></div>
+      <label class="row muted" style="gap:10px"><input type="checkbox" name="alert" ${S.draft.alert ? 'checked' : ''}> Marcar como alerta (mudança de sala, atraso…)</label>
+      <button class="btn block" id="annBtn">${icon('send', 'i-s')} <span id="annBtnTxt">${btnLabel}</span></button>
+      <p class="muted">${to === 'all' ? 'Aparece no feed de avisos de todos, chega em tempo real a quem tem a app aberta e por push a quem o ativou.' : 'Aviso privado: só os selecionados o recebem (notificações e push). Não aparece no feed geral.'}</p></form>
     <div class="sec-title"><h3>Avisos enviados</h3></div>
-    ${anns.map((a) => `<div class="card pad-s ${a.kind === 'alert' ? '' : 'filled'}" ${a.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(a.title)}</b><span class="muted">${fmtDT(a.at)}</span></div><div class="muted">${esc(a.body)}</div></div>`).join('') || '<div class="empty">Nenhum aviso enviado.</div>'}`;
+    ${list.map((x) => `<div class="card pad-s ${x.kind === 'alert' ? '' : 'filled'}" ${x.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(x.title)}</b><span class="muted">${fmtDT(x.at)}</span></div><div class="muted">${esc(x.body)}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${audience(x)}${x.audience === 'custom' && x.names?.length ? `<span class="muted clip" style="flex:1">${esc(x.names.join(', '))}${x.count > x.names.length ? '…' : ''}</span>` : ''}</div></div>`).join('') || '<div class="empty">Nenhum aviso enviado.</div>'}`;
 }
 
 function adminLive() {
@@ -749,6 +762,9 @@ document.addEventListener('click', async (e) => {
       if (!ok) return;
       await api('/admin/users/delete', { method: 'POST', body: { id } }); await loadAdmin(); toast('Inscrito excluído', u.name);
     }
+    else if (act === 'annto') { S.annTo = v; }
+    else if (act === 'annall') { document.querySelectorAll('#annList .prow:not([hidden]) input').forEach((i) => { i.checked = true; S.annSel.add(i.dataset.ann); }); annUpdate(); return; }
+    else if (act === 'annnone') { S.annSel = new Set(); document.querySelectorAll('#annList input').forEach((i) => (i.checked = false)); annUpdate(); return; }
     else if (act === 'exportcsv') { exportCSV(); return; }
     else if (act === 'copyurl') { await navigator.clipboard?.writeText(location.origin + v); toast('Link copiado', location.origin + v); return; }
     else if (act === 'copylink') { await navigator.clipboard?.writeText(`${location.origin}/?checkin=${v}`); toast('Link copiado'); return; }
@@ -808,7 +824,17 @@ async function onSubmit(f, d) {
     }
     if (f.id === 'recoverForm') { S.recoverEmail = d.email.trim().toLowerCase(); await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); S.recoverSent = true; S.err = ''; }
     if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
-    if (f.id === 'annForm') { await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info' } }); const ev = await api('/event'); S.ev.announcements = ev.announcements; f.reset(); toast('Aviso enviado'); }
+    if (f.id === 'annForm') {
+      const custom = (S.annTo || 'all') === 'custom', ids = custom ? [...(S.annSel || [])] : null;
+      if (custom && !ids.length) throw new Error('Selecione pelo menos um destinatário');
+      const total = S.adm?.users?.length || 0, n = custom ? ids.length : total;
+      const ok = await confirmDialog({ title: 'Enviar aviso?', confirmLabel: 'Enviar', body: `<b>${esc(d.title)}</b><br>Será enviado a ${custom ? `<b>${n} inscrito${n === 1 ? '' : 's'}</b> selecionado${n === 1 ? '' : 's'}` : `<b>todos os ${total} inscritos</b>`}${d.alert ? ' como <b>alerta</b>' : ''}.` });
+      if (!ok) return;
+      const r = await api('/admin/announce', { method: 'POST', body: { title: d.title, body: d.body, kind: d.alert ? 'alert' : 'info', ...(custom ? { recipients: ids } : {}) } });
+      const ev = await api('/event'); S.ev.announcements = ev.announcements; await loadAdmin();
+      S.draft.title = S.draft.body = ''; S.draft.alert = false; S.annSel = new Set();
+      toast('Aviso enviado', `Entregue a ${r.sent} inscrito${r.sent === 1 ? '' : 's'}`);
+    }
     if (f.id === 'pollForm') { await api('/admin/poll', { method: 'POST', body: { sessionId: d.sessionId, question: d.question, options: d.options.split('\n') } }); await loadAdmin(); f.reset(); toast('Enquete aberta'); }
     if (f.id === 'onbForm') {
       if (!d.company.trim() || !d.role.trim() || !d.phone.trim()) throw new Error('Empresa, cargo e telefone são obrigatórios');
@@ -827,7 +853,7 @@ async function onSubmit(f, d) {
 // guarda o que foi escrito nos formulários de autenticação, para não perder ao voltar a desenhar a tela
 document.addEventListener('input', (e) => {
   const f = e.target.form;
-  if (f && ['authForm', 'resetForm', 'recoverForm', 'onbForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
+  if (f && ['authForm', 'resetForm', 'recoverForm', 'onbForm', 'annForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
 });
 
 document.addEventListener('change', (e) => {
@@ -842,6 +868,22 @@ document.addEventListener('input', (e) => {
   S.admQ = e.target.value; const l = document.getElementById('admList'); if (!l) return;
   const f = S.admFilter || 'all', qs = S.admQ.toLowerCase();
   l.innerHTML = S.adm.users.filter((u) => (f === 'all' || (f === 'admin' && u.isAdmin) || (f === 'in' && Object.keys(u.checkins).length) || (f === 'out' && !Object.keys(u.checkins).length)) && (!qs || [u.name, u.email, u.phone, u.company, u.role].join(' ').toLowerCase().includes(qs))).map(adminUserRow).join('') || '<div class="empty">Ninguém encontrado.</div>';
+});
+
+function annUpdate() {
+  const n = S.annSel.size, c = document.getElementById('annCount'), b = document.getElementById('annBtnTxt');
+  if (c) c.textContent = `${n} selecionado${n === 1 ? '' : 's'}`;
+  if (b && (S.annTo || 'all') === 'custom') b.textContent = `Enviar a ${n} inscrito${n === 1 ? '' : 's'}`;
+}
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset?.ann) { S.annSel = S.annSel || new Set(); t.checked ? S.annSel.add(t.dataset.ann) : S.annSel.delete(t.dataset.ann); annUpdate(); }
+  if (t.form?.id === 'annForm' && t.name === 'alert') S.draft.alert = t.checked;
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'annSearch') return;
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#annList .prow').forEach((r) => { r.hidden = !!q && !r.dataset.q.includes(q); });
 });
 
 let searchT;
