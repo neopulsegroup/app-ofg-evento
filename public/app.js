@@ -274,8 +274,9 @@ function authView() {
     <div class="card pad-s"><div class="row top"><div class="avatar" style="border-radius:14px;background:var(--elevated);color:var(--primary)">${icon('qr_code_scanner')}</div>
       <div class="grow"><div class="row between" style="flex-wrap:wrap;gap:6px"><h3 class="h-md">Acesso Rápido</h3><span class="pill-tag green"><span class="d"></span>Check-in QR</span></div>
       <p class="muted">Já está no Hub Plural Espinheiro? Crie o seu perfil e faça check-in com o QR code da receção.</p></div></div></div>
-    <button class="btn block" data-act="authmode" data-v="register">${icon('assignment_ind')} Criar meu perfil no evento</button>
+    <button class="btn block first-cta" data-act="authmode" data-v="first"><span class="grow" style="text-align:left"><b style="display:block;font-size:17px">${icon('verified_user')} Primeiro acesso</b><small style="font-weight:500;opacity:.9">Inscreveu-se pelo site? Crie a sua senha em 1 minuto</small></span>${icon('arrow_forward')}</button>
     <button class="btn tonal block" data-act="authmode" data-v="login">${icon('login')} Já tenho conta / Entrar</button>
+    <button class="btn text block" data-act="authmode" data-v="register">${icon('assignment_ind')} Criar meu perfil no evento</button>
     ${legalLine()}
     ${venueLine()}
     <p class="muted" style="text-align:center">Precisa de suporte com a sua inscrição? Fale com a organização.</p>
@@ -302,7 +303,7 @@ function authView() {
     <p class="muted row" style="gap:8px">${icon('shield', 'i-s')} Os seus dados ficam visíveis apenas para os outros participantes do evento.</p>
     ${legalLine()}`;
   else if (mode === 'login') inner = `
-    <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 33 anos</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
+    <div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row" style="gap:12px"><div class="avatar" style="border-radius:12px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div><b class="eyebrow" style="color:var(--text)">OFG Recife 2026 · 3 de novembro</b></div><span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>Lobby ativo</span></div>
       <span class="pill-tag" style="align-self:flex-start;text-transform:none;letter-spacing:.02em">Saúde mental nas empresas</span>
       <h1 class="display">Acessar Credencial</h1><p class="muted" style="font-size:15px">Entre com seu e-mail corporativo cadastrado para acessar a programação, reuniões e networking.</p></div>
     <div class="hero-img has-photo" style="height:170px;border-radius:20px"><img class="hero-photo" src="/media/hub-plural.jpg" alt="Hub Plural Espinheiro" loading="eager"><b class="photo-cap row">${icon('location_on')} Hub Plural Espinheiro · Recife/PE</b></div>
@@ -313,9 +314,29 @@ function authView() {
       ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
       <button class="btn block">Entrar no App do Evento ${icon('arrow_forward', 'i-s')}</button></form>
     ${googleBlock(true)}
+    <button class="btn tonal block" data-act="authmode" data-v="first">${icon('verified_user', 'i-s')} Inscreveu-se pelo site? Primeiro acesso</button>
     <p style="text-align:center" class="muted">Ainda não tem cadastro? <button class="btn text small" data-act="authmode" data-v="register" style="padding:0 4px;height:auto">Crie o seu perfil</button></p>
     ${legalLine()}
     ${supportCard('Dúvidas com seu acesso? Fale com o credenciamento presencial (receção do evento).')}`;
+  else if (mode === 'first') inner = `${authTop('Primeiro acesso')}
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('verified_user')}</div>
+      <h1 class="display" style="font-size:28px">Primeiro acesso</h1><p class="muted" style="font-size:15px">Use o e-mail da sua inscrição. Para confirmar que é você, informe os 4 últimos dígitos do telefone cadastrado.</p></div>
+    <form id="firstForm" class="field" style="gap:16px">
+      ${field('email', 'E-mail da inscrição', 'ex: nome@empresa.com', { req: 1, icon: 'mail', type: 'email', ac: 'email' })}
+      ${field('last4', '4 últimos dígitos do telefone', '0000', { req: 1, icon: 'call', type: 'tel', ac: 'off' })}
+      ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
+      <button class="btn block">Continuar ${icon('arrow_forward', 'i-s')}</button></form>
+    <button class="btn text block" data-act="authmode" data-v="login">${icon('arrow_back', 'i-s')} Já tenho senha? Entrar</button>
+    ${supportCard('Sem telefone na inscrição ou sem acesso? Fale com o credenciamento presencial.')}`;
+  else if (mode === 'firstpw') inner = `${authTop('Criar senha')}
+    <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('lock')}</div>
+      <h1 class="display" style="font-size:28px">Olá, ${esc((S.firstName || '').split(' ')[0])}!</h1><p class="muted" style="font-size:15px">Crie a senha que vai usar para entrar no app do evento.</p></div>
+    <form id="firstPwForm" class="field" style="gap:16px">
+      ${field('password', 'Nova senha', 'Mínimo 8 caracteres', { req: 1, icon: 'lock', type: 'password', pw: 1, min: 8, ac: 'new-password' })}
+      ${field('password2', 'Confirmar senha', 'Repita a senha', { req: 1, icon: 'lock', type: 'password', pw: 1, min: 8, ac: 'new-password' })}
+      ${S.err ? `<div class="err">${esc(S.err)}</div>` : ''}
+      <button class="btn block">Criar senha e entrar ${icon('arrow_forward', 'i-s')}</button></form>
+  `;
   else if (mode === 'recover') inner = `${authTop('Identity Verification')}
     <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px"><div class="avatar lg" style="width:84px;height:84px;background:var(--elevated);color:var(--primary)">${icon('lock')}</div>
       <span class="pill-tag gray"><span class="d" style="color:var(--success)"></span>OFG Recife 2026 · Acesso seguro</span>
@@ -853,7 +874,7 @@ function setBusy(on) {
     document.body.append(el);
   } else el?.remove();
 }
-const AUTH_FORMS = ['authForm', 'recoverForm', 'resetForm', 'onbForm'];
+const AUTH_FORMS = ['authForm', 'recoverForm', 'resetForm', 'onbForm', 'firstForm', 'firstPwForm'];
 
 document.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -872,6 +893,12 @@ async function onSubmit(f, d) {
       await startSession(r.token, S.authMode === 'register' || !!d.remember); return;
     }
     if (f.id === 'recoverForm') { S.recoverEmail = d.email.trim().toLowerCase(); await api('/recover', { method: 'POST', body: { email: S.recoverEmail } }); S.recoverSent = true; S.err = ''; }
+    if (f.id === 'firstForm') { const r = await api('/first-access/check', { method: 'POST', body: { email: d.email, last4: d.last4 } }); S.firstTicket = r.ticket; S.firstName = r.name; S.authMode = 'firstpw'; S.err = ''; toTop(); render(); return; }
+    if (f.id === 'firstPwForm') {
+      if (d.password !== d.password2) throw new Error('As senhas não coincidem');
+      const r = await api('/first-access/set', { method: 'POST', body: { ticket: S.firstTicket, password: d.password } });
+      S.firstTicket = null; await startSession(r.token, true); return;
+    }
     if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
     if (f.id === 'annForm') {
       const custom = (S.annTo || 'all') === 'custom', ids = custom ? [...(S.annSel || [])] : null;
