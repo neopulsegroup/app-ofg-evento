@@ -567,6 +567,7 @@ function adminUserRow(u) {
   return `<div class="card pad-s"><div class="row">${av(u)}<div class="grow"><div class="row" style="gap:6px"><b class="clip">${esc(u.name)}</b>${u.isAdmin ? '<span class="pill-tag">Admin</span>' : ''}</div><div class="muted clip">${esc([u.role, u.company].filter(Boolean).join(' · '))}</div><div class="muted clip">${esc(u.email)}</div>${u.phone ? `<div class="muted clip">${icon('call', 'i-s')} ${esc(u.phone)}</div>` : ''}</div></div>
     <div class="chips"><span class="chip static">Check-in ${days}/${S.ev.event.days.length}</span><span class="chip static">${u.points} pts</span>${u.push ? '<span class="chip static on">Push</span>' : ''}<span class="chip static">${fmtDT(u.createdAt)}</span></div>
     <button class="btn small ${u.isAdmin ? 'tonal' : ''}" data-act="role" data-id="${u.id}" data-v="${u.isAdmin ? '0' : '1'}" ${self && u.isAdmin ? 'disabled' : ''}>${icon('admin_panel_settings', 'i-s')} ${u.isAdmin ? (self ? 'Você é admin' : 'Remover admin') : 'Promover a admin'}</button>
+    ${self ? '' : u.hasPass ? `<button class="btn small tonal" data-act="resetpw" data-id="${u.id}">${icon('lock', 'i-s')} Redefinir senha</button>` : '<div class="muted">Sem senha · usa "Primeiro acesso"</div>'}
     ${u.isAdmin ? '' : `<button class="btn small danger-o" data-act="deluser" data-id="${u.id}">${icon('delete', 'i-s')} Excluir inscrito</button>`}</div>`;
 }
 
@@ -984,6 +985,13 @@ document.addEventListener('click', async (e) => {
       const ok = await confirmDialog({ title: 'Apagar ganhador?', danger: true, confirmLabel: 'Apagar ganhador', body: `<b>${esc(d.name)}</b> sai da lista de ganhadores e volta a poder ser sorteado.` });
       if (!ok) return;
       await api('/admin/draw/delete', { method: 'POST', body: { id } }); await loadAdmin(); toast('Ganhador apagado', d.name);
+    }
+    else if (act === 'resetpw') {
+      const u = S.adm.users.find((x) => x.id === id);
+      const ok = await confirmDialog({ title: 'Redefinir senha?', confirmLabel: 'Redefinir senha',
+        body: `Vai apagar a senha de <b>${esc(u.name)}</b> (${esc(u.email)}) e terminar as sessões abertas. Depois, a pessoa toca em <b>Primeiro acesso</b> e confirma com o e-mail e os <b>4 últimos dígitos do telefone</b>${u.phone ? ` (${esc(u.phone)})` : ''} para criar uma senha nova.${u.phone ? '' : ' <b>Atenção: esta pessoa não tem telefone cadastrado, então o Primeiro acesso não vai funcionar.</b>'}` });
+      if (!ok) return;
+      await api('/admin/users/reset-password', { method: 'POST', body: { id } }); await loadAdmin(); toast('Senha redefinida', u.name);
     }
     else if (act === 'deluser') {
       const u = S.adm.users.find((x) => x.id === id);
