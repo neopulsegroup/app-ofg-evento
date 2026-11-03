@@ -425,3 +425,25 @@ html.doc, body.doc { height: auto; min-height: 100%; overflow: auto; }
 .stage-chip { padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, .12); font: 600 14px Inter, sans-serif; }
 .stage-chip b { color: #ffd76a; margin-right: 4px; }
 @media (prefers-reduced-motion: reduce) { .stage-name.win { animation: none; } }
+
+/* leads HDS */
+.hds-card { gap: 12px; border-color: var(--primary-line); }
+.hds-card.done { background: var(--primary-tint); }
+.lead-row { display: flex; flex-direction: column; gap: 10px; }
+.lead-row a { color: var(--primary); font-size: 14px; text-decoration: none; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg button { height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--elevated); color: var(--text2); font: 700 12px Inter, sans-serif; cursor: pointer; }
+.seg button.on { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+#leadsPrint { display: none; }
+@media print {
+  body.print-leads .topbar, body.print-leads .nav, body.print-leads #toasts, body.print-leads main > *:not(#leadsBox) { display: none !important; }
+  body.print-leads #leadsBox > :not(#leadsPrint) { display: none !important; }
+  body.print-leads #leadsBox { display: block !important; border: 0; box-shadow: none; padding: 0; }
+  body.print-leads #leadsPrint { display: block; color: #000; font: 12px Inter, sans-serif; }
+  body.print-leads #leadsPrint h2 { font-size: 18px; margin: 0 0 4px; }
+  body.print-leads #leadsPrint table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  body.print-leads #leadsPrint th, body.print-leads #leadsPrint td { border-bottom: 1px solid #bbb; padding: 6px 8px; text-align: left; vertical-align: top; }
+  body.print-leads #leadsPrint th { background: #eee; }
+  body.print-leads { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4 landscape; margin: 12mm; }
+}

@@ -66,3 +66,5 @@
 .fi-rr-expand::before { content: "\e623"; }
 .fi-rr-cross::before { content: "\e4cd"; }
 .fi-rr-party-horn::before { content: "\eb5e"; }
+.fi-rr-print::before { content: "\ec6b"; }
+.fi-rr-flame::before { content: "\e6f3"; }
