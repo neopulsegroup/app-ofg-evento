@@ -73,3 +73,16 @@ alter table announcements add column if not exists audience text not null defaul
 
 -- foto de perfil (URL pública no bucket 'avatars' do Storage)
 alter table users add column if not exists photo text not null default '';
+
+-- sorteio: ganhadores (announced = já revelado na animação)
+create table if not exists draws (
+  id text primary key,
+  n int not null,
+  user_id text not null references users(id) on delete cascade,
+  name text not null,
+  company text not null default '',
+  prize text not null default '',
+  at bigint not null,
+  announced boolean not null default false
+);
+alter table draws enable row level security;
