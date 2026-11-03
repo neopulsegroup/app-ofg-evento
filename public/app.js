@@ -2,7 +2,7 @@ import { processPhoto, badgeHtml, mountBadge, badgeBlob } from '/badge.js';
 // OFG Recife 2026 – PWA (vanilla JS, sem build)
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const ICONS = {"admin_panel_settings":"user-gear","alternate_email":"at","arrow_back":"arrow-left","arrow_forward":"arrow-right","assignment_ind":"id-badge","auto_awesome":"sparkles","badge":"id-badge","bolt":"bolt","calendar_month":"calendar","call":"phone-call","campaign":"megaphone","chat_bubble":"comment","check":"check","check_circle":"check-circle","chevron_right":"angle-small-right","contact_page":"address-book","content_copy":"copy","dark_mode":"moon","dashboard":"dashboard","delete":"trash","domain":"building","download":"download","event":"calendar-check","expand_more":"angle-small-down","group":"users","groups":"users-alt","help":"interrogation","how_to_vote":"ballot-check","hub":"people-network-partner","keyboard_arrow_up":"angle-small-up","light_mode":"sun","lightbulb":"lightbulb-on","location_on":"map-marker","lock":"lock","login":"sign-in-alt","mail":"envelope","near_me":"location-arrow","notifications":"bell","notifications_active":"bell-ring","open_in_new":"up-right-from-square","person":"user","person_add":"user-add","person_search":"member-search","photo_camera":"camera","public":"globe","qr_code_scanner":"qr-scan","schedule":"clock","search":"search","send":"paper-plane","sensors":"wifi","share":"share","shield":"shield","support_agent":"headset","verified_user":"shield-check","visibility":"eye","visibility_off":"eye-crossed","volunteer_activism":"hand-holding-heart","warning":"triangle-warning","work":"briefcase"}; // nomes lógicos → Flaticon UIcons (regular rounded)
+const ICONS = {"admin_panel_settings":"user-gear","alternate_email":"at","arrow_back":"arrow-left","arrow_forward":"arrow-right","assignment_ind":"id-badge","auto_awesome":"sparkles","badge":"id-badge","bolt":"bolt","calendar_month":"calendar","call":"phone-call","campaign":"megaphone","chat_bubble":"comment","check":"check","check_circle":"check-circle","chevron_right":"angle-small-right","contact_page":"address-book","content_copy":"copy","dark_mode":"moon","dashboard":"dashboard","delete":"trash","domain":"building","download":"download","event":"calendar-check","expand_more":"angle-small-down","group":"users","groups":"users-alt","help":"interrogation","how_to_vote":"ballot-check","hub":"people-network-partner","keyboard_arrow_up":"angle-small-up","light_mode":"sun","lightbulb":"lightbulb-on","location_on":"map-marker","lock":"lock","login":"sign-in-alt","mail":"envelope","near_me":"location-arrow","notifications":"bell","notifications_active":"bell-ring","open_in_new":"up-right-from-square","person":"user","person_add":"user-add","person_search":"member-search","photo_camera":"camera","public":"globe","qr_code_scanner":"qr-scan","schedule":"clock","search":"search","send":"paper-plane","sensors":"wifi","share":"share","shield":"shield","support_agent":"headset","verified_user":"shield-check","visibility":"eye","visibility_off":"eye-crossed","volunteer_activism":"hand-holding-heart","gift":"gift","trophy":"trophy","expand":"expand","close":"cross","party":"party-horn","warning":"triangle-warning","work":"briefcase"}; // nomes lógicos → Flaticon UIcons (regular rounded)
 const icon = (n, cls = '') => `<i class="fi fi-rr-${ICONS[n] || n} ${cls}"></i>`;
 
 // ---------- tema (escuro/claro) ----------
@@ -52,7 +52,7 @@ function schedule(kind) { // junta rajadas de sinais (ex.: 250 votos seguidos) n
     try {
       if (kinds.includes('ver')) {
         const ev = await api('/event'); S.ev.announcements = ev.announcements;
-        await Promise.all([loadPolls(), loadQuestions(), S.tab === 'live' ? loadBoard() : null]);
+        await Promise.all([loadPolls(), loadQuestions(), loadDraws(), S.tab === 'live' ? loadBoard() : null]);
       }
       if (kinds.includes('uv')) {
         await Promise.all([loadMe(), loadConns(), loadNotes(), loadSugg()]);
@@ -113,6 +113,14 @@ async function syncPush() { // renova a subscrição no servidor se a permissão
 const loadMe = async () => (S.me = await api('/me'));
 const loadConns = async () => (S.conns = await api('/connections'));
 const loadPolls = async () => (S.polls = await api('/polls'));
+const loadDraws = async () => {
+  const list = await api('/draws');
+  if (S.drawSeen) {
+    const fresh = list.filter((d) => !S.drawSeen.has(d.id) && Date.now() - d.at < 3 * 60000);
+    if (fresh.length && !document.getElementById('stage') && !adminOn()) celebrateDraw(fresh);
+  }
+  S.drawSeen = new Set(list.map((d) => d.id)); S.draws = list;
+};
 const loadQuestions = async () => (S.questions = await api('/questions'));
 const loadBoard = async () => (S.board = await api('/leaderboard'));
 const loadPeople = async () => (S.people = await api('/people?q=' + encodeURIComponent(S.q)));
@@ -135,7 +143,7 @@ async function boot() {
   if (rp && !S.token) { S.authMode = 'recover'; S.recoverEmail = rp; S.recoverSent = true; history.replaceState({}, '', '/'); }
   S.day = S.ev.event.days.find((d) => d.date === new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10))?.id || S.ev.event.days[0].id;
   if (S.token) {
-    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); if (adminOn()) await loadAdmin(); startSync(); syncPush(); } catch (err) { if (S.token) { S.err = 'Não foi possível carregar a sua conta. Tente novamente.'; S.me = null; } /* 401: logout já tratado */ }
+    try { await Promise.all([loadMe(), loadConns(), loadPolls(), loadQuestions(), loadDraws(), loadNotes(), loadSugg(), loadPeople()]); S.notes.forEach((n) => seenNotes.add(n.id)); if (adminOn()) await loadAdmin(); startSync(); syncPush(); } catch (err) { if (S.token) { S.err = 'Não foi possível carregar a sua conta. Tente novamente.'; S.me = null; } /* 401: logout já tratado */ }
     const code = new URLSearchParams(location.search).get('checkin');
     if (code && S.me) { await doCheckin(code); history.replaceState({}, '', '/'); }
   }
@@ -189,7 +197,7 @@ function render() {
   else if (v?.type === 'profile') { body = profileView(); title = 'O meu perfil'; }
   else if (v?.type === 'badge') { body = badgeView(); title = 'Crachá do evento'; }
   else if (v?.type === 'checkin') { body = checkinView(); title = 'Check-in'; }
-  else if (adminOn()) { const at = S.adminTab || 'dash'; body = { dash: adminDash, users: adminUsers, comms: adminComms, live: adminLive }[at](); title = { dash: 'Painel', users: 'Inscritos', comms: 'Avisos', live: 'Enquetes' }[at]; }
+  else if (adminOn()) { const at = S.adminTab || 'dash'; body = { dash: adminDash, users: adminUsers, comms: adminComms, live: adminLive, draw: adminDraw }[at](); title = { dash: 'Painel', users: 'Inscritos', comms: 'Avisos', live: 'Enquetes', draw: 'Sorteio' }[at]; }
   else body = { agenda: agendaView, network: networkView, live: liveView, event: eventView }[S.tab]();
   const left = sub
     ? `<button class="tool" data-act="back" aria-label="Voltar" style="background:none">${icon('arrow_back')}</button>`
@@ -200,7 +208,7 @@ function render() {
       ${adm ? '' : `<button class="tool" data-act="checkin" aria-label="Check-in">${icon('qr_code_scanner')}</button>`}
       <button class="tool" data-act="notes" aria-label="Notificações">${icon('notifications')}${unread ? '<span class="dot"></span>' : ''}</button>
       <button class="me-btn ${S.me.photo ? 'has-img' : ''}" data-act="profile" aria-label="Perfil">${S.me.photo ? `<img src="${esc(S.me.photo)}" alt="">` : icon('person', 'i-s')}</button></div>`;
-  const tabs = adm ? [['dash', 'Painel', 'dashboard'], ['users', 'Inscritos', 'group'], ['comms', 'Avisos', 'campaign'], ['live', 'Enquetes', 'how_to_vote']] : [['agenda', 'Agenda', 'calendar_month'], ['network', 'Networking', 'groups'], ['live', 'Ao Vivo', 'sensors'], ['event', 'Evento', 'domain']];
+  const tabs = adm ? [['dash', 'Painel', 'dashboard'], ['users', 'Inscritos', 'group'], ['comms', 'Avisos', 'campaign'], ['live', 'Enquetes', 'how_to_vote'], ['draw', 'Sorteio', 'gift']] : [['agenda', 'Agenda', 'calendar_month'], ['network', 'Networking', 'groups'], ['live', 'Ao Vivo', 'sensors'], ['event', 'Evento', 'domain']];
   const cur = adm ? (S.adminTab || 'dash') : S.tab;
   setApp(`<div class="shell"><div class="topbar"><div class="brand">${left}<div class="clip"><div class="eyebrow blue">OFG Recife 2026</div><h1>${esc(title)}</h1></div></div>${tools}</div>
     <main>${body}</main>
@@ -497,8 +505,8 @@ const adminOn = () => !!S.me?.isAdmin && localStorage.getItem('ofg_mode') !== 'u
 const fmtDT = (t) => new Date(t).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 async function loadAdmin() {
   try {
-    const [stats, users, anns] = await Promise.all([api('/admin/stats'), api('/admin/users'), api('/admin/announcements')]);
-    S.adm = { stats, users, anns };
+    const [stats, users, anns, dr] = await Promise.all([api('/admin/stats'), api('/admin/users'), api('/admin/announcements'), api('/admin/draws')]);
+    S.adm = { stats, users, anns, draws: dr.draws, eligible: dr.eligible };
   } catch (e) { console.error('admin', e); S.adm = { ...(S.adm || {}), error: e.message }; }
 }
 const QR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
@@ -582,6 +590,99 @@ function adminComms() {
     <div class="sec-title"><h3>Avisos enviados</h3></div>
     ${list.map((x) => `<div class="card pad-s ${x.kind === 'alert' ? '' : 'filled'}" ${x.kind === 'alert' ? 'style="border-color:rgba(239,68,68,.35)"' : ''}><div class="row between"><b>${esc(x.title)}</b><span class="muted">${fmtDT(x.at)}</span></div><div class="muted">${esc(x.body)}</div>
       <div class="row" style="gap:6px;flex-wrap:wrap">${audience(x)}${x.audience === 'custom' && x.names?.length ? `<span class="muted clip" style="flex:1">${esc(x.names.join(', '))}${x.count > x.names.length ? '…' : ''}</span>` : ''}</div></div>`).join('') || '<div class="empty">Nenhum aviso enviado.</div>'}`;
+}
+
+// ----- Sorteio -----
+async function loadConfetti() {
+  if (!window.confetti) await new Promise((ok) => { const s = document.createElement('script'); s.src = '/vendor/confetti.browser.min.js'; s.onload = ok; s.onerror = ok; document.head.append(s); });
+  return window.confetti;
+}
+async function fireworks(ms = 4000, big = true) {
+  const c = await loadConfetti(); if (!c) return;
+  const end = Date.now() + ms, rnd = (a, b) => Math.random() * (b - a) + a, base = { startVelocity: 30, spread: 360, ticks: 70, zIndex: 99999 };
+  c({ particleCount: big ? 160 : 80, spread: 90, origin: { y: 0.6 }, zIndex: 99999 });
+  const iv = setInterval(() => {
+    const left = end - Date.now(); if (left <= 0) return clearInterval(iv);
+    const n = 50 * (left / ms);
+    c({ ...base, particleCount: n, origin: { x: rnd(0.1, 0.3), y: Math.random() - 0.2 } });
+    c({ ...base, particleCount: n, origin: { x: rnd(0.7, 0.9), y: Math.random() - 0.2 } });
+  }, 250);
+}
+function celebrateDraw(fresh) {
+  const mine = fresh.find((d) => d.mine), d = mine || fresh[fresh.length - 1];
+  if (mine) { toast('Parabéns, você ganhou! 🎉', mine.prize || 'Você foi sorteado no evento.'); fireworks(5000, true); }
+  else { toast('Sorteio', `${d.name}${d.company ? ' · ' + d.company : ''}${d.prize ? ' ganhou ' + d.prize : ''}`); fireworks(2500, false); }
+}
+const drawWhen = (at) => new Date(at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Recife' });
+function drawWinnersCard() {
+  const list = S.draws || []; if (!list.length) return '';
+  return `<div class="card"><div class="row between"><div><div class="eyebrow blue">Sorteio</div><div class="h-md">Ganhadores</div></div>${icon('gift')}</div>
+    ${list.map((d) => `<div class="inner row ${d.mine ? 'win-me' : ''}"><b class="mono" style="width:28px">${d.n}</b><div class="grow clip"><b>${esc(d.name)}${d.mine ? ' · você!' : ''}</b><div class="muted clip">${esc([d.company, d.prize].filter(Boolean).join(' · '))}</div></div><span class="muted">${drawWhen(d.at)}</span></div>`).join('')}</div>`;
+}
+function adminDraw() {
+  const a = S.adm; if (!a?.draws) return a?.error ? admErr() : '<div class="empty">A carregar…</div>';
+  const n = S.drawAll ? a.eligible.all : a.eligible.checkedIn;
+  const shown = a.draws.filter((d) => d.announced), pend = a.draws.filter((d) => !d.announced);
+  return `<div class="card"><div class="row between"><span class="eyebrow blue">Sorteio</span><span class="pill-tag ${n ? 'green' : 'gray'}">${n} elegíve${n === 1 ? 'l' : 'is'}</span></div>
+    <form id="drawForm" style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>Prêmio (opcional)</label><input name="prize" maxlength="60" placeholder="ex.: Voucher, Kit OFG" value="${esc(S.drawPrize || '')}"></div>
+      <label class="row" style="gap:10px"><input type="checkbox" name="all" ${S.drawAll ? 'checked' : ''}> Incluir todos os inscritos (e não só quem fez check-in)</label>
+      <p class="muted">Admins não participam e quem já ganhou não é sorteado de novo. Check-in: ${a.eligible.checkedIn} · Todos: ${a.eligible.all}.</p>
+      <button class="btn block" ${n ? '' : 'disabled'}>${icon('gift')} Sortear</button>
+      <button type="button" class="btn tonal block" data-act="drawstage">${icon('expand')} Modo telão (projetar no auditório)</button></form></div>
+    ${pend.map((d) => `<div class="card pad-s row"><div class="grow clip"><b>${esc(d.name)}</b><div class="muted">Sorteio sem revelação (a tela foi fechada antes do fim)</div></div><button class="btn small" data-act="drawreveal" data-id="${d.id}">Revelar</button><button class="iconbtn" data-act="drawdel" data-id="${d.id}" aria-label="Apagar">${icon('delete', 'i-s')}</button></div>`).join('')}
+    <div class="sec-title"><h3>Ganhadores (${shown.length})</h3></div>
+    ${shown.map((d) => `<div class="card pad-s row"><b class="mono" style="width:28px">${d.n}</b><div class="grow clip"><b>${esc(d.name)}</b><div class="muted clip">${esc([d.company, d.prize].filter(Boolean).join(' · '))}</div></div><span class="muted">${drawWhen(d.at)}</span><button class="iconbtn" data-act="drawdel" data-id="${d.id}" aria-label="Apagar ganhador">${icon('delete', 'i-s')}</button></div>`).join('') || '<div class="empty">Ainda sem ganhadores.</div>'}`;
+}
+
+// tela cheia para projetar: letras grandes, Espaço/Enter sorteia, Esc fecha
+let stageKey;
+function openStage(autoDraw) {
+  if (document.getElementById('stage')) return;
+  const el = document.createElement('div'); el.id = 'stage'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Sorteio');
+  el.innerHTML = `<button class="stage-x" data-act="stageclose" aria-label="Fechar">${icon('close')}</button>
+    <div class="stage-top"><img src="/media/logo-ofg.png" alt="Oporto Forte Group"><div class="stage-title">Sorteio · ${esc(S.ev.event.name)}</div><div class="stage-prize" id="stPrize"></div></div>
+    <div class="stage-main"><div class="stage-name" id="stName">Pronto para sortear</div><div class="stage-co" id="stCo"></div></div>
+    <div class="stage-ctl"><input id="stPrizeIn" maxlength="60" placeholder="Prêmio (opcional)" value="${esc(S.drawPrize || '')}" aria-label="Prêmio"><label class="row" style="gap:8px"><input type="checkbox" id="stAll" ${S.drawAll ? 'checked' : ''}> Todos os inscritos</label><button class="btn stage-go" id="stGo" data-act="stagego">${icon('gift')} Sortear</button></div>
+    <div class="stage-list" id="stList"></div>`;
+  document.body.append(el);
+  stageKey = (e) => { if (e.key === 'Escape') closeStage(); else if ((e.key === ' ' || e.key === 'Enter') && !/INPUT/.test(document.activeElement?.tagName || '')) { e.preventDefault(); stageDraw(); } };
+  document.addEventListener('keydown', stageKey);
+  el.requestFullscreen?.().catch(() => {});
+  stageList();
+  if (autoDraw) stageDraw();
+}
+function closeStage() {
+  document.getElementById('stage')?.remove(); document.removeEventListener('keydown', stageKey);
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  render();
+}
+function stageList() {
+  const l = document.getElementById('stList'); if (!l) return;
+  l.innerHTML = (S.adm?.draws || []).filter((d) => d.announced).slice(-8).map((d) => `<span class="stage-chip"><b>${d.n}</b> ${esc(d.name)}</span>`).join('');
+}
+let stageBusy = false;
+async function stageDraw() {
+  const el = document.getElementById('stage'); if (!el || stageBusy) return;
+  stageBusy = true;
+  const nameEl = el.querySelector('#stName'), coEl = el.querySelector('#stCo'), go = el.querySelector('#stGo');
+  S.drawPrize = el.querySelector('#stPrizeIn').value.trim(); S.drawAll = el.querySelector('#stAll').checked;
+  go.disabled = true; coEl.textContent = ''; nameEl.classList.remove('win'); el.querySelector('#stPrize').textContent = S.drawPrize;
+  let r;
+  try { r = await api('/admin/draw', { method: 'POST', body: { prize: S.drawPrize, includeAll: S.drawAll } }); }
+  catch (e) { nameEl.textContent = e.message; go.disabled = false; stageBusy = false; return; }
+  const names = r.names.length ? r.names : [r.draw.name], t0 = performance.now();
+  nameEl.classList.add('spin');
+  await new Promise((done) => {
+    let i = 0;
+    const tick = () => { const e = performance.now() - t0; if (e >= 5000) return done(); nameEl.textContent = names[i++ % names.length]; setTimeout(tick, 55 + Math.pow(e / 5000, 2.2) * 420); };
+    tick();
+  });
+  nameEl.classList.remove('spin'); nameEl.classList.add('win'); nameEl.textContent = r.draw.name; coEl.textContent = r.draw.company;
+  fireworks(5000, true);
+  await api('/admin/draw/reveal', { method: 'POST', body: { id: r.draw.id } }).catch(() => {});
+  await loadAdmin(); stageList();
+  go.disabled = false; go.innerHTML = `${icon('gift')} Sortear novamente`; stageBusy = false;
 }
 
 function adminLive() {
@@ -684,6 +785,7 @@ function liveView() {
   const pts_ = S.board?.points ?? S.me.points;
   const qSessions = all.filter((s) => !['Receção', 'Networking'].includes(s.tag));
   return `
+    ${drawWinnersCard()}
     <div class="row between"><span class="pill-tag ${cur ? 'live' : 'gray'}"><span class="d"></span>${cur ? esc(cur.room) + ' · Ao vivo' : 'Sem sessão ao vivo'}</span></div>
     ${stage ? `<div class="card glow clickable" data-act="session" data-id="${stage.id}"><div class="row between"><span class="eyebrow blue">${cur ? 'Palco principal' : 'A seguir'}</span><span class="pill-tag ${cur ? 'live' : ''}">${cur ? 'até ' + stage.end : stage.start}</span></div>
       <h3 class="title-l">${esc(stage.title)}</h3>${stage.speaker ? `<div class="muted">${esc(stage.speaker)}</div>` : ''}</div>` : ''}
@@ -825,6 +927,16 @@ document.addEventListener('click', async (e) => {
       if (!(await confirmDialog({ title: v === '1' ? 'Promover a administrador?' : 'Remover acesso de administrador?', body: v === '1' ? `<b>${esc(u.name)}</b> terá acesso total ao painel de administração.` : `<b>${esc(u.name)}</b> deixará de ter acesso ao painel de administração.`, confirmLabel: v === '1' ? 'Promover' : 'Remover' }))) return;
       await api('/admin/users/role', { method: 'POST', body: { id, admin: v === '1' } }); await loadAdmin(); toast('Permissões atualizadas', u.name);
     }
+    else if (act === 'drawstage') { openStage(false); return; }
+    else if (act === 'stageclose') { closeStage(); return; }
+    else if (act === 'stagego') { stageDraw(); return; }
+    else if (act === 'drawreveal') { await api('/admin/draw/reveal', { method: 'POST', body: { id } }); await loadAdmin(); toast('Sorteio revelado'); }
+    else if (act === 'drawdel') {
+      const d = S.adm.draws.find((x) => x.id === id);
+      const ok = await confirmDialog({ title: 'Apagar ganhador?', danger: true, confirmLabel: 'Apagar ganhador', body: `<b>${esc(d.name)}</b> sai da lista de ganhadores e volta a poder ser sorteado.` });
+      if (!ok) return;
+      await api('/admin/draw/delete', { method: 'POST', body: { id } }); await loadAdmin(); toast('Ganhador apagado', d.name);
+    }
     else if (act === 'deluser') {
       const u = S.adm.users.find((x) => x.id === id);
       const ok = await confirmDialog({ title: 'Excluir inscrito?', danger: true, confirmLabel: 'Excluir definitivamente',
@@ -900,6 +1012,7 @@ async function onSubmit(f, d) {
       S.firstTicket = null; await startSession(r.token, true); return;
     }
     if (f.id === 'resetForm') { const r = await api('/reset', { method: 'POST', body: { email: S.recoverEmail, pin: d.pin, password: d.password } }); await startSession(r.token, true); return; }
+    if (f.id === 'drawForm') { S.drawPrize = (d.prize || '').trim(); S.drawAll = !!d.all; openStage(true); return; }
     if (f.id === 'annForm') {
       const custom = (S.annTo || 'all') === 'custom', ids = custom ? [...(S.annSel || [])] : null;
       if (custom && !ids.length) throw new Error('Selecione pelo menos um destinatário');
@@ -932,7 +1045,9 @@ document.addEventListener('input', (e) => {
   if (f && ['authForm', 'resetForm', 'recoverForm', 'onbForm', 'annForm'].includes(f.id) && e.target.name && e.target.type !== 'checkbox') S.draft[e.target.name] = e.target.value;
 });
 
+document.addEventListener('input', (e) => { if (e.target.form?.id === 'drawForm' && e.target.name === 'prize') S.drawPrize = e.target.value; });
 document.addEventListener('change', (e) => {
+  if (e.target.form?.id === 'drawForm' && e.target.name === 'all') { S.drawAll = e.target.checked; render(); return; }
   if (e.target.id === 'photoInput' && e.target.files?.[0]) { const f = e.target.files[0]; e.target.value = ''; sharePhotoFile(f); return; }
   if (e.target.id !== 'themeSwitch') return;
   const dark = e.target.checked; applyTheme(dark ? 'dark' : 'light');

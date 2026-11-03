@@ -61,3 +61,8 @@
 .fi-rr-users-alt::before { content: "\f0e0"; }
 .fi-rr-wifi::before { content: "\f15c"; }
 .fi-rr-people-network-partner::before { content: "\eb93"; }
+.fi-rr-gift::before { content: "\e782"; }
+.fi-rr-trophy::before { content: "\f04d"; }
+.fi-rr-expand::before { content: "\e623"; }
+.fi-rr-cross::before { content: "\e4cd"; }
+.fi-rr-party-horn::before { content: "\eb5e"; }
