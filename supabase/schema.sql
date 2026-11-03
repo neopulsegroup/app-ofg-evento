@@ -74,6 +74,15 @@ alter table announcements add column if not exists audience text not null defaul
 -- foto de perfil (URL pública no bucket 'avatars' do Storage)
 alter table users add column if not exists photo text not null default '';
 
+-- leads: interesse na HDS (um registo por utilizador; status new|contacted|declined)
+create table if not exists leads (
+  user_id text primary key references users(id) on delete cascade,
+  at bigint not null,
+  status text not null default 'new',
+  consent boolean not null default true
+);
+alter table leads enable row level security;
+
 -- sorteio: ganhadores (announced = já revelado na animação)
 create table if not exists draws (
   id text primary key,
